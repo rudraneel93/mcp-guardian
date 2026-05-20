@@ -2,7 +2,25 @@
  * URL guard — blocks SSRF-prone, local, and dangerous-scheme URLs in tool arguments.
  */
 import { walkStringLeaves } from './arg-leaf-walker.js';
+import { stripZeroWidthCharacters } from '../utils/payload-normalizer.js';
 import { isTrustedDomainSquat } from '../utils/registrable-domain.js';
+
+/** URL guard normalization — percent-decode + NFKC; avoids base64/hex blob decode on hostnames. */
+function normalizeUrlInput(raw: string): string {
+  let current = stripZeroWidthCharacters(raw.trim()).normalize('NFKC');
+  for (let i = 0; i < 5; i++) {
+    const before = current;
+    current = current.replace(/%([0-9A-Fa-f]{2})/g, (_m, hex) => {
+      try {
+        return String.fromCharCode(parseInt(hex, 16));
+      } catch {
+        return _m;
+      }
+    });
+    if (current === before) break;
+  }
+  return current;
+}
 
 const URL_ARG_FIELDS = new Set(['url', 'href', 'target', 'webhook', 'callback', 'link']);
 
@@ -95,8 +113,28 @@ function hostnameFromParsed(url: URL): string {
   return url.hostname;
 }
 
+/** Normalize dotted-quad octets (e.g. 0177.0.0.1 → 127.0.0.1, 0x7f.0.0.1). */
+function normalizeDottedHost(host: string): string {
+  if (!/^[\d.x]+$/i.test(host) || !host.includes('.')) return host;
+  const parts = host.split('.');
+  if (parts.length !== 4) return host;
+  const normalized: number[] = [];
+  for (const part of parts) {
+    if (/^0x[0-9a-f]+$/i.test(part)) {
+      normalized.push(parseInt(part, 16) & 0xff);
+    } else if (/^0[0-7]+$/.test(part) && part.length > 1) {
+      normalized.push(parseInt(part, 8) & 0xff);
+    } else {
+      const n = parseInt(part, 10);
+      if (!Number.isFinite(n) || n < 0 || n > 255) return host;
+      normalized.push(n);
+    }
+  }
+  return normalized.join('.');
+}
+
 export function isDangerousUrl(raw: string): { block: boolean; reason?: string } {
-  const trimmed = raw.trim();
+  const trimmed = normalizeUrlInput(raw);
   if (!trimmed) return { block: false };
 
   const parsed = parseUrlCandidate(trimmed);
@@ -112,7 +150,10 @@ export function isDangerousUrl(raw: string): { block: boolean; reason?: string }
     return { block: true, reason: `Blocked URL scheme (${scheme})` };
   }
 
-  const host = hostnameFromParsed(parsed).toLowerCase();
+  let host = hostnameFromParsed(parsed).toLowerCase();
+  if (/^[\d.x]+$/i.test(host)) {
+    host = normalizeDottedHost(host);
+  }
 
   if (LOCALHOST_NAMES.has(host) || host.endsWith('.localhost')) {
     return { block: true, reason: `Blocked localhost/metadata host: ${host}` };

@@ -21,6 +21,8 @@ import {
   type PolicyEngineDeps,
   type SyncEvaluateContext,
 } from './strategies/index.js';
+import { evaluateDataFlowAsync } from './strategies/data-flow-strategy.js';
+import { evaluateMlSemanticGuard } from './ml-semantic-guard.js';
 
 /**
  * Policy Engine — evaluates every intercepted tools/call against configured rules.
@@ -129,6 +131,24 @@ export class PolicyEngine {
     const { decision: rateDecision, skipLocalRateLimit } = await evaluateRedisRateLimit(context, deps);
     if (rateDecision) {
       return resolvePolicyPrecedence(opaDecision, rateDecision);
+    }
+
+    const dataFlowDecision = await evaluateDataFlowAsync(context, this.config);
+    if (dataFlowDecision?.action === 'block' || dataFlowDecision?.action === 'flag') {
+      const resolved: PolicyDecision = {
+        ...dataFlowDecision,
+        action: this.resolveAction(dataFlowDecision.action),
+      };
+      return resolvePolicyPrecedence(opaDecision, resolved);
+    }
+
+    const { decision: mlDecision } = await evaluateMlSemanticGuard(context, this.config);
+    if (mlDecision?.action === 'block' || mlDecision?.action === 'flag') {
+      const resolved: PolicyDecision = {
+        ...mlDecision,
+        action: this.resolveAction(mlDecision.action),
+      };
+      return resolvePolicyPrecedence(opaDecision, resolved);
     }
 
     const yamlDecision = this.evaluate(context, { skipLocalRateLimit });

@@ -14,6 +14,14 @@ describe('url-guard', () => {
     expect(isDangerousUrl('http://2130706433/').block).toBe(true);
   });
 
+  it('blocks octal-dotted localhost', () => {
+    expect(isDangerousUrl('http://0177.0.0.1/admin').block).toBe(true);
+  });
+
+  it('blocks percent-encoded loopback', () => {
+    expect(isDangerousUrl('http://%31%32%37.%30.%30.%31/').block).toBe(true);
+  });
+
   it('blocks file scheme', () => {
     expect(isDangerousUrl('file:///etc/passwd').block).toBe(true);
   });

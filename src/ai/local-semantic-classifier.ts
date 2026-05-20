@@ -13,14 +13,19 @@ export interface LocalSemanticScore {
 }
 
 const RISK_PATTERNS: { id: string; category: string; weight: number; re: RegExp }[] = [
-  { id: 'ignore-instructions', category: 'prompt-injection', weight: 0.35, re: /ignore\s+(?:all\s+)?(?:previous|your)\s+instructions/i },
+  { id: 'ignore-instructions', category: 'prompt-injection', weight: 0.35, re: /ignore\s+(?:all\s+)?(?:previous|your|prior)\s+instructions/i },
   { id: 'jailbreak', category: 'prompt-injection', weight: 0.4, re: /\b(?:jailbreak|DAN\s+mode|developer\s+mode)\b/i },
+  { id: 'bypass-synonym', category: 'prompt-injection', weight: 0.38, re: /\b(?:circumvent|work around|evade detection)\b/i },
   { id: 'exfil', category: 'exfiltration', weight: 0.45, re: /(?:curl|wget|fetch).{0,40}https?:\/\//i },
+  { id: 'indirect-exfil', category: 'exfiltration', weight: 0.42, re: /(?:logged|syslog|metrics|trace).{0,40}(?:remote|external|upstream|collector)/i },
   { id: 'credential', category: 'exfiltration', weight: 0.3, re: /(?:api[_-]?key|secret|password|token)\s*[:=]\s*['"]?[A-Za-z0-9_\-]{12,}/i },
   { id: 'shell', category: 'encoded-payload', weight: 0.35, re: /\b(?:rm\s+-rf|bash\s+-c|eval\s*\(|powershell\s+-)/i },
+  { id: 'cmd-subst', category: 'encoded-payload', weight: 0.4, re: /\$\(\s*(?:cat|head).*(?:passwd|\.ssh|\.env)/i },
+  { id: 'sql-injection', category: 'injection', weight: 0.4, re: /\bor\s+['"]?1['"]?\s*=\s*['"]?1|union\s+select/i },
   { id: 'base64-shell', category: 'encoded-payload', weight: 0.4, re: /[A-Za-z0-9+/]{80,}={0,2}/ },
   { id: 'priv-esc', category: 'privilege-escalation', weight: 0.35, re: /\b(?:sudo|chmod\s+777|\/etc\/passwd|kubectl\s+apply)\b/i },
   { id: 'role-override', category: 'prompt-injection', weight: 0.38, re: /(?:you are now|act as|your new role)/i },
+  { id: 'tool-chain', category: 'tool-chain', weight: 0.45, re: /read_file.{0,80}(?:\.env|passwd|\.ssh).{0,80}(?:then|next).{0,80}(?:post|webhook|curl|send)/i },
 ];
 
 const SUSPICIOUS_THRESHOLD = parseFloat(process.env['GUARDIAN_LOCAL_SEMANTIC_THRESHOLD'] || '0.55');

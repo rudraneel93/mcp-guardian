@@ -51,7 +51,9 @@ const INJECTION_RULES: InjectionPattern[] = [
   // CATEGORY 2: Instruction Suppression — CRITICAL
   // ═══════════════════════════════════════════════════════════════
   { id: 'ignore-instructions', severity: 'critical', description: 'Instruction suppression',
-    regex: '(?:ignore (?:all |previous |your |the |my )?(?:instructions|rules|guidelines|system prompt|directives|constraints|limitations|restrictions)|disregard (?:everything|all |previous )?(?:instructions|rules|above|before))' },
+    regex: '(?:ignore (?:all |previous |your |the |my |prior )?(?:instructions|rules|guidelines|system prompt|directives|constraints|limitations|restrictions|safety rules)|disregard (?:everything|all |previous )?(?:instructions|rules|above|before))' },
+  { id: 'instruction-before-tool', severity: 'critical', description: 'Override instructions before tool use',
+    regex: '(?:before|prior to) (?:using|calling|invoking|running) (?:this|the|any) tool.{0,80}(?:ignore|disregard|forget|override|bypass|circumvent)' },
   { id: 'forget-training', severity: 'critical', description: 'Forget/release from training constraints',
     regex: '(?:forget (?:everything|all|your (?:training|instructions|guidelines|safety|ethics))|release yourself from|break free from|escape (?:your )?(?:constraints|limitations|programming))' },
 
@@ -59,7 +61,7 @@ const INJECTION_RULES: InjectionPattern[] = [
   // CATEGORY 3: Jailbreak / Unrestricted Mode — CRITICAL
   // ═══════════════════════════════════════════════════════════════
   { id: 'developer-mode', severity: 'critical', description: 'DAN/developer mode jailbreak',
-    regex: '(?:developer mode|DAN mode|jailbreak|bypass (?:safety|filter|restriction|guardrail|content policy|moderation)|turn off (?:safety|filter|restrictions?|guardrails?|content moderation))' },
+    regex: '(?:developer mode|DAN mode|jailbreak|(?:bypass|circumvent|evade|work around).{0,40}(?:safety|(?:content\\s+)?filter|restriction|guardrail|content policy|moderation|detection)|turn off (?:safety|filter|restrictions?|guardrails?|content moderation))' },
   { id: 'evil-mode', severity: 'critical', description: 'Evil/opposite persona jailbreak',
     regex: '(?:evil (?:mode|twin|version|clone|persona)|opposite mode|dark (?:mode|version|side)|unleash(?:ed)? (?:mode|version))' },
   { id: 'safety-filters-off', severity: 'critical', description: 'Explicit safety filter disable',
@@ -82,6 +84,14 @@ const INJECTION_RULES: InjectionPattern[] = [
     regex: '(?:post (?:this|the|all|data|result|output) to|deliver (?:this|payload|data|result)s? to|forward (?:this|everything|the result) to)' },
   { id: 'pipe-exfiltration', severity: 'critical', description: 'Pipe to external transmission',
     regex: '\\|[\\s]*\\b(?:curl|wget|nc|netcat|ncat|sendmail|ssmtp|mail)\\b' },
+  { id: 'indirect-exfil-logging', severity: 'critical', description: 'Indirect exfiltration via logging/debug channels',
+    regex: '(?:results?|output|data|response|payload).{0,60}(?:will be|to be|should be|are being) (?:logged|recorded|streamed|written|persisted).{0,50}(?:debug|remote|external|upstream|endpoint|collector|syslog|metrics)' },
+  { id: 'indirect-exfil-telemetry', severity: 'critical', description: 'Indirect exfiltration via metrics/trace/syslog',
+    regex: '(?:send|post|stream|forward|upload|ship|emit|push|relay).{0,50}(?:metrics|telemetry|traces?|syslog|debug output|audit trail).{0,50}(?:to |into |at )(?:remote|external|upstream|off-?site|collector|endpoint)' },
+  { id: 'indirect-exfil-report', severity: 'high', description: 'Debug/report channel data exfiltration',
+    regex: '(?:include|attach|embed|append).{0,40}(?:debug output|trace log|stderr|stdout).{0,50}(?:in (?:the )?report|upstream|remote|external|off-?site)' },
+  { id: 'indirect-exfil-syslog', severity: 'high', description: 'Stream tool output to syslog/remote logging',
+    regex: '(?:stream|pipe|forward|send|write).{0,40}(?:output|results?|response|data).{0,40}(?:to |into )(?:syslog|remote log|centralized log)' },
 
   // ═══════════════════════════════════════════════════════════════
   // CATEGORY 5: Credential Theft — CRITICAL
@@ -125,7 +135,7 @@ const INJECTION_RULES: InjectionPattern[] = [
   { id: 'tool-chain-abuse-v2', severity: 'high', description: 'Chain tool calls via natural language',
     regex: '(?:you should (?:also |now )?(?:call|use|run|execute|invoke)|make sure to (?:call|use|run)|don\'t forget to (?:call|use|run)|please (?:also )?(?:call|use|run|execute))' },
   { id: 'multi-tool-chaining', severity: 'high', description: 'Multi-step tool chaining instruction',
-    regex: '(?:first .+(?:then|after that|next,? |finally|afterwards).{0,120}(?:call|use|run|execute|invoke)|step [0-9]+:\\s*(?:call|use|run|execute|invoke))' },
+    regex: '(?:first .+(?:then|after that|next,? |finally|afterwards).{0,120}(?:call|use|run|execute|invoke|post|send|upload|forward|deliver|webhook)|step [0-9]+:\\s*(?:call|use|run|execute|invoke|post|send|upload|curl|wget))' },
 
   // ═══════════════════════════════════════════════════════════════
   // CATEGORY 9: Command Execution — HIGH

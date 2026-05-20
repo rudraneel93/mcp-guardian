@@ -71,7 +71,7 @@ function isBlocked(decision: PolicyDecision): boolean {
   return decision.action === 'block';
 }
 
-function ctx(toolName: string, args: Record<string, unknown>): CallContext {
+function ctx(toolName: string, args: Record<string, unknown>, sessionId: string): CallContext {
   return {
     serverName: 'corpus-eval',
     toolName,
@@ -79,6 +79,7 @@ function ctx(toolName: string, args: Record<string, unknown>): CallContext {
     requestId: 'corpus-1',
     requestTokens: 50,
     timestamp: new Date().toISOString(),
+    sessionId,
   };
 }
 
@@ -154,7 +155,10 @@ export async function runEval(): Promise<EvalReport> {
   console.log(`Running corpus evaluation (${files.length} entries) against ${POLICY_PATH}\n`);
 
   for (const { relPath, entry } of files) {
-    const decision = engine.evaluate(ctx(entry.toolName, entry.arguments ?? {}));
+    const sessionId = `corpus:${relPath}`;
+    const decision = await engine.evaluateAsync(
+      ctx(entry.toolName, entry.arguments ?? {}, sessionId),
+    );
     const blocked = isBlocked(decision);
     const expected = entry.expected;
     const category = entry.category;

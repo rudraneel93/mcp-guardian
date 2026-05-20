@@ -62,6 +62,10 @@ export interface PolicyConfig {
     unicode_strict?: boolean;
     /** When true (and OPA_URL set), evaluate OPA/Rego before YAML rules. */
     opa?: boolean;
+    /** DistilBERT zero-shot intent classification on tool arguments (default: true). */
+    ml_semantic?: boolean;
+    /** Cross-request session data-flow analysis (read → exfil chains). Default: true. */
+    data_flow?: boolean;
     rules: PolicyRule[];
   };
 }
@@ -85,4 +89,8 @@ export interface CallContext {
   agentIdentity?: import('../auth/auth-types.js').AgentIdentity;
   /** Optional idempotency key from params._meta or HTTP header */
   idempotencyKey?: string;
+  /** MCP transport session id (SSE/HTTP) or proxy instance id (stdio). */
+  sessionId?: string;
+  /** Precomputed session key for data-flow store (overrides sessionId composition). */
+  sessionKey?: string;
 }

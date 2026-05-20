@@ -380,6 +380,29 @@ export class ShellTokenizer {
     return null;
   }
 
+  private readonly SENSITIVE_READ_RE =
+    /\b(?:cat|head|tail|less|strings|type|more|bat)\s+.*(?:\/etc\/passwd|~\/\.ssh|\.ssh\/|id_rsa|id_ed25519|\.env|\.aws\/|credentials|secrets?)/i;
+
+  /**
+   * Command substitution/backticks that read credential paths (e.g. $(cat /etc/passwd)).
+   */
+  detectSensitiveCommandSubstitution(input: string): string | null {
+    const patterns = [
+      /\$\(\s*(?:cat|head|tail|less|strings|type)\s+[^)]*(?:\/etc\/passwd|~\/\.ssh|\.ssh\/|id_rsa|\.env)/i,
+      /`[^`]*(?:cat|head|tail)\s+[^`]*(?:\/etc\/passwd|~\/\.ssh|id_rsa|\.env)[^`]*`/i,
+      /\$\{[^}]*(?:cat|head|tail)[^}]*(?:passwd|\.ssh|\.env)/i,
+    ];
+    for (const re of patterns) {
+      if (re.test(input)) {
+        return 'Semantic: command substitution reads sensitive credential path';
+      }
+    }
+    if (this.SENSITIVE_READ_RE.test(input)) {
+      return 'Semantic: shell reads sensitive credential path';
+    }
+    return null;
+  }
+
   /** Detect base64-decode piped to shell (echo … | base64 -d | sh). */
   detectBase64PipeShell(input: string): string | null {
     for (const pattern of this.BASE64_PIPE_SHELL) {
