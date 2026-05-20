@@ -121,9 +121,13 @@ function normalizeDottedHost(host: string): string {
   const normalized: number[] = [];
   for (const part of parts) {
     if (/^0x[0-9a-f]+$/i.test(part)) {
-      normalized.push(parseInt(part, 16) & 0xff);
+      const n = parseInt(part, 16);
+      if (!Number.isFinite(n) || n < 0 || n > 255) return host;
+      normalized.push(n);
     } else if (/^0[0-7]+$/.test(part) && part.length > 1) {
-      normalized.push(parseInt(part, 8) & 0xff);
+      const n = parseInt(part, 8);
+      if (!Number.isFinite(n) || n < 0 || n > 255) return host;
+      normalized.push(n);
     } else {
       const n = parseInt(part, 10);
       if (!Number.isFinite(n) || n < 0 || n > 255) return host;

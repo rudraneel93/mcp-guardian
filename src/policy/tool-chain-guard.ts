@@ -18,6 +18,9 @@ const EXFIL_VERBS =
 const CHAIN_CONNECTORS =
   /\b(?:then|after that|afterwards|next|finally|and then|step\s*2)\b/i;
 
+const READ_STAGE_SIGNALS =
+  /\b(?:read|fetch|get|load|retrieve|open|cat|download|pull)\b/i;
+
 /** Multi-step natural-language tool chaining (read sensitive data → exfil). */
 const STAGED_CHAIN_RE = new RegExp(
   `${READ_TOOLS.source}.{0,120}${SENSITIVE_TARGETS.source}.{0,160}${CHAIN_CONNECTORS.source}.{0,120}${EXFIL_VERBS.source}`,
@@ -26,7 +29,7 @@ const STAGED_CHAIN_RE = new RegExp(
 
 /** Inverse order: exfil instruction referencing prior read of secrets. */
 const EXFIL_AFTER_READ_RE = new RegExp(
-  `${EXFIL_VERBS.source}.{0,80}${SENSITIVE_TARGETS.source}|${SENSITIVE_TARGETS.source}.{0,120}${EXFIL_VERBS.source}`,
+  `${EXFIL_VERBS.source}.{0,80}${READ_STAGE_SIGNALS.source}.{0,80}${SENSITIVE_TARGETS.source}|${SENSITIVE_TARGETS.source}.{0,120}${READ_STAGE_SIGNALS.source}.{0,80}${EXFIL_VERBS.source}`,
   'i',
 );
 
