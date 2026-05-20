@@ -260,6 +260,8 @@ export class HttpProxyServer {
             timestamp: new Date().toISOString(),
             tenantId: requestTenantId,
             agentIdentity,
+            sessionId: req.headers['x-mcp-session-id']?.toString()
+              || req.headers['mcp-session-id']?.toString(),
           };
 
           const decision = await this.policyEngine.evaluateAsync(context);

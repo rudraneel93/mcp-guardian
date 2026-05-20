@@ -29,6 +29,8 @@ export class StreamableHttpProxyServer {
   private opts: StreamableHttpProxyOptions;
   private httpServer: ReturnType<typeof createServer> | null = null;
   private boundPort = 0;
+  /** Fallback session id when clients omit X-MCP-Session-Id. */
+  private readonly transportSessionId = randomUUID();
 
   constructor(opts: StreamableHttpProxyOptions) {
     this.opts = opts;
@@ -171,6 +173,9 @@ export class StreamableHttpProxyServer {
       timestamp: new Date().toISOString(),
       tenantId,
       idempotencyKey: idempotencyKeyFromRequest(params?._meta),
+      sessionId: req.headers['x-mcp-session-id']?.toString()
+        || req.headers['mcp-session-id']?.toString()
+        || this.transportSessionId,
     };
 
     const decision = await this.opts.policy.evaluateAsync(context);

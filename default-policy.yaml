@@ -7,6 +7,9 @@ policy:
   default_action: block
   semantic_shell: true
   unicode_strict: true
+  # P2: DistilBERT MNLI zero-shot intent + cross-request session data-flow chains
+  ml_semantic: true
+  data_flow: true
   rules:
     - name: deny-dangerous-tools
       description: Explicitly deny tools that can execute arbitrary code

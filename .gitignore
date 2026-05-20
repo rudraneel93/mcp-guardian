@@ -17,4 +17,6 @@ scenarios/dogfood/sandbox/
 test-report.html
 test-report*.html
 corpus-eval-report.json
+assets/ml/**/onnx/*.onnx
+assets/ml/**/model.onnx
 benchmark-report.json

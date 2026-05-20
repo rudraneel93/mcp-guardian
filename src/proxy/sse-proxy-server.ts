@@ -338,6 +338,7 @@ export class SseProxyServer extends EventEmitter {
         requestTokens: this.tokenCounter.count(JSON.stringify(jsonRpcRequest)),
         timestamp: new Date().toISOString(),
         tenantId,
+        sessionId: session?.id,
       };
       const decision = await this.opts.policy.evaluateAsync(context);
       if (decision.action === 'block') {

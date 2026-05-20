@@ -289,6 +289,8 @@ export class WebSocketProxyServer {
       tenantId,
       agentIdentity,
       idempotencyKey: idempotencyKeyFromRequest(params?._meta),
+      sessionId: req.headers['x-mcp-session-id']?.toString()
+        || req.headers['mcp-session-id']?.toString(),
     };
 
     const decision = await this.opts.policy.evaluateAsync(context);

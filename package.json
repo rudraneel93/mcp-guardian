@@ -6,6 +6,11 @@
   "files": [
     "dist",
     "assets",
+    "assets/ml/prompt-injection/config.json",
+    "assets/ml/prompt-injection/tokenizer.json",
+    "assets/ml/prompt-injection/tokenizer_config.json",
+    "assets/ml/prompt-injection/vocab.txt",
+    "assets/ml/prompt-injection/special_tokens_map.json",
     "deploy/dashboard.html",
     "deploy/dashboard-spa",
     "policy-templates",
@@ -67,6 +72,8 @@
     "live:tui-demo": "node scripts/run-live-tui-demo.cjs --stream",
     "doctor": "node dist/cli.js doctor --policy default-policy.yaml",
     "eval": "tsx corpus/run-eval.ts",
+    "ml:export": "python3 scripts/export-prompt-injection-onnx.py",
+    "ml:preload": "node scripts/preload-ml-model.mjs",
     "verify:corpus": "bash scripts/verify-corpus-parity.sh",
     "dashboard:build": "npm run build --prefix deploy/dashboard-spa",
     "dashboard:dev": "npm run dev --prefix deploy/dashboard-spa",
@@ -113,7 +120,9 @@
     "tiktoken": "^1.0.15",
     "webhook-discord": "^3.7.8",
     "ws": "^8.20.1",
-    "zod": "^3.23.0"
+    "zod": "^3.23.0",
+    "@xenova/transformers": "^2.17.2",
+    "sharp": "^0.33.5"
   },
   "optionalDependencies": {
     "@anthropic-ai/tokenizer": "^0.0.4",
@@ -136,7 +145,8 @@
   "license": "MIT",
   "pnpm": {
     "onlyBuiltDependencies": [
-      "better-sqlite3"
+      "better-sqlite3",
+      "sharp"
     ],
     "overrides": {
       "protobufjs": ">=8.0.2",

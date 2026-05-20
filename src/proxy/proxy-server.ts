@@ -98,6 +98,8 @@ export class McpProxyServer {
   private pendingRequestTimer: ReturnType<typeof setTimeout> | null = null;
   /** Bearer token captured from initialize / env for the session (stdio OAuth). */
   private sessionAuthHeader: string | undefined;
+  /** Stable session id for cross-tool data-flow tracking (stdio transport). */
+  private readonly proxySessionId: string;
 
   private requestTimeoutMs: number;
   private restartCount: number = 0;
@@ -144,6 +146,7 @@ export class McpProxyServer {
     }
     this.tokenCounter = new TokenCounter();
     this.db = db;
+    this.proxySessionId = randomUUID();
 
     Metrics.circuitBreakerState.set({ server_name: this.serverName }, 0);
     this.spawnChild();
@@ -832,6 +835,7 @@ export class McpProxyServer {
             tenantId,
             agentIdentity,
             idempotencyKey,
+            sessionId: this.proxySessionId,
           };
 
           const decision = await engine.evaluateAsync(context);
