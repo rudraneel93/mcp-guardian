@@ -1,4 +1,5 @@
 import { evaluateSemanticGuards } from '../semantic-guards.js';
+import { evaluateToolChainGuard } from '../tool-chain-guard.js';
 import type { CommandRisk } from '../shell-tokenizer.js';
 import type { PolicyDecision } from '../policy-types.js';
 import type { PolicyStrategy, PolicyEngineDeps, SyncEvaluateContext } from './types.js';
@@ -28,6 +29,15 @@ function evaluateSemanticShell(
       action: resolveAction('block'),
       rule: 'semantic-shell-guard',
       reason: b64ShellReason,
+    };
+  }
+
+  const substReason = shellTokenizer.detectSensitiveCommandSubstitution(argsStr);
+  if (substReason) {
+    return {
+      action: resolveAction('block'),
+      rule: 'semantic-shell-guard',
+      reason: substReason,
     };
   }
 
@@ -77,6 +87,11 @@ export const semanticGuardsStrategy: PolicyStrategy = {
 
     const shellDecision = evaluateSemanticShell(shellRisk, normalized.toolName, argsStr, deps);
     if (shellDecision) return shellDecision;
+
+    const toolChain = evaluateToolChainGuard(normalized);
+    if (toolChain) {
+      return { ...toolChain, action: deps.resolveAction(toolChain.action) };
+    }
 
     const semanticAbuse = evaluateSemanticGuards(normalized);
     if (semanticAbuse) {
