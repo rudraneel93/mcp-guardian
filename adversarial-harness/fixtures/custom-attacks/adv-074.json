@@ -1,0 +1,9 @@
+{
+  "category": "ldap",
+  "toolName": "search",
+  "arguments": {
+    "query": "admin)(&"
+  },
+  "ruleHint": "semantic-sql-guard",
+  "expected": "block"
+}

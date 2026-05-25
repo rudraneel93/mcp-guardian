@@ -1,0 +1,9 @@
+{
+  "category": "stacked-evasion",
+  "toolName": "query",
+  "arguments": {
+    "sql": "SELECT * FROM credentials WHERE '1'='1' UNION SELECT password FROM users"
+  },
+  "ruleHint": "semantic-sql-guard",
+  "expected": "block"
+}

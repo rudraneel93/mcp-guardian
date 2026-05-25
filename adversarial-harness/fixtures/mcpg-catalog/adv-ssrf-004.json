@@ -1,0 +1,9 @@
+{
+  "id": "adv-ssrf-004",
+  "category": "ssrf",
+  "toolName": "search",
+  "arguments": {
+    "href": "http://0x7f000001/"
+  },
+  "expected": "block"
+}

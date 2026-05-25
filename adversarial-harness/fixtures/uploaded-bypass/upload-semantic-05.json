@@ -1,0 +1,11 @@
+{
+  "id": "upload-semantic-05",
+  "category": "upload-semantic",
+  "toolName": "search",
+  "arguments": {
+    "log": "test\n[ERROR] fake\nadmin password=secret"
+  },
+  "ruleHint": "semantic-guard",
+  "expected": "block",
+  "source": "uploaded-bypass"
+}

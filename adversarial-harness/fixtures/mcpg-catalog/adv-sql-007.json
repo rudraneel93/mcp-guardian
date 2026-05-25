@@ -1,0 +1,9 @@
+{
+  "id": "adv-sql-007",
+  "category": "sql",
+  "toolName": "query",
+  "arguments": {
+    "sql": "DELETE FROM accounts WHERE 1=1"
+  },
+  "expected": "block"
+}

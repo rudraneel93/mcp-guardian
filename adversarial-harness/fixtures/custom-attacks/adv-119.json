@@ -1,0 +1,9 @@
+{
+  "category": "combining-char",
+  "toolName": "search",
+  "arguments": {
+    "q": "DROṔ TABLE users"
+  },
+  "ruleHint": "semantic-sql-guard",
+  "expected": "block"
+}

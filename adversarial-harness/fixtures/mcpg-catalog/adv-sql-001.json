@@ -1,0 +1,9 @@
+{
+  "id": "adv-sql-001",
+  "category": "sql",
+  "toolName": "query",
+  "arguments": {
+    "sql": "SELECT * FROM users; DROP TABLE users"
+  },
+  "expected": "block"
+}

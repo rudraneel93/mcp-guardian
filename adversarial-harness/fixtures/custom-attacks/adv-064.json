@@ -1,0 +1,9 @@
+{
+  "category": "deny-github",
+  "toolName": "create_issue",
+  "arguments": {
+    "title": "leak"
+  },
+  "ruleHint": "deny-github-write-tools",
+  "expected": "block"
+}

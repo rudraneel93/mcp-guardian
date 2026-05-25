@@ -1,0 +1,9 @@
+{
+  "category": "ssti",
+  "toolName": "search",
+  "arguments": {
+    "body": "<% Runtime.getRuntime() %>"
+  },
+  "ruleHint": "semantic-ssti-guard",
+  "expected": "block"
+}

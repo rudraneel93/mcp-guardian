@@ -1,0 +1,41 @@
+{
+  "id": "token-002",
+  "category": "token-evasion",
+  "expected": "pass",
+  "policyMode": "isolated",
+  "isolatedPolicy": {
+    "mode": "block",
+    "default_action": "pass",
+    "rules": [
+      {
+        "name": "allow-search",
+        "action": "block",
+        "tools": {
+          "allow": [
+            "search"
+          ]
+        }
+      },
+      {
+        "name": "token-isolated",
+        "action": "block",
+        "maxTokens": 100
+      }
+    ]
+  },
+  "context": {
+    "toolName": "search",
+    "arguments": {},
+    "requestTokens": 100,
+    "agentIdentity": {
+      "sub": "harness-agent",
+      "issuer": "harness",
+      "clientId": "client-harness-1",
+      "scopes": [
+        "read",
+        "write"
+      ]
+    }
+  },
+  "expectedRule": "allowlist"
+}

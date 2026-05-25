@@ -1,0 +1,10 @@
+{
+  "id": "gen-default-deny-002",
+  "category": "default-deny",
+  "expected": "block",
+  "policyMode": "default",
+  "toolName": "admin_panel",
+  "arguments": {
+    "action": "reset"
+  }
+}

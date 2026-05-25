@@ -1,0 +1,11 @@
+{
+  "id": "upload-semantic-01",
+  "category": "upload-semantic",
+  "toolName": "search",
+  "arguments": {
+    "xml": "<!DOCTYPE foo [<!ENTITY xxe SYSTEM \"file:///etc/passwd\">]>"
+  },
+  "ruleHint": "semantic-guard",
+  "expected": "block",
+  "source": "uploaded-bypass"
+}

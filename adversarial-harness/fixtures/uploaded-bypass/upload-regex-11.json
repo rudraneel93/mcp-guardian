@@ -1,0 +1,11 @@
+{
+  "id": "upload-regex-11",
+  "category": "upload-regex",
+  "toolName": "search",
+  "arguments": {
+    "q": "curl http://169.254.169.254/latest/meta-data"
+  },
+  "ruleHint": "pattern-evasion",
+  "expected": "block",
+  "source": "uploaded-bypass"
+}

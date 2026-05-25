@@ -1,0 +1,9 @@
+{
+  "category": "rate-flood",
+  "toolName": "search",
+  "arguments": {
+    "q": "flood probe"
+  },
+  "ruleHint": "rate-limit-tool-calls",
+  "expected": "block"
+}

@@ -1,0 +1,9 @@
+{
+  "category": "ssrf-evasion",
+  "toolName": "search",
+  "arguments": {
+    "url": "http://169.254.169.254/latest/meta-data/"
+  },
+  "ruleHint": "block-dangerous-urls",
+  "expected": "block"
+}

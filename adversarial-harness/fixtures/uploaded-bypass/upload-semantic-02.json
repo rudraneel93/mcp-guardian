@@ -1,0 +1,11 @@
+{
+  "id": "upload-semantic-02",
+  "category": "upload-semantic",
+  "toolName": "search",
+  "arguments": {
+    "config": "!!python/object/apply:os.system [\"id\"]"
+  },
+  "ruleHint": "semantic-guard",
+  "expected": "block",
+  "source": "uploaded-bypass"
+}

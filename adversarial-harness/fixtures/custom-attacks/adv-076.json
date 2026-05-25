@@ -1,0 +1,9 @@
+{
+  "category": "reverse-shell",
+  "toolName": "search",
+  "arguments": {
+    "cmd": "nc -lvp 4444 -e /bin/sh"
+  },
+  "ruleHint": "reverse-shell",
+  "expected": "block"
+}

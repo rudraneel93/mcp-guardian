@@ -1,0 +1,9 @@
+{
+  "category": "ssrf-evasion",
+  "toolName": "puppeteer_navigate",
+  "arguments": {
+    "url": "http://0177.0.0.1/admin"
+  },
+  "ruleHint": "semantic-url-guard",
+  "expected": "block"
+}

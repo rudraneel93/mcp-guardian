@@ -1,0 +1,9 @@
+{
+  "category": "deserialization",
+  "toolName": "search",
+  "arguments": {
+    "pickle": "cos\nsystem\n(S\"id\"\ntR."
+  },
+  "ruleHint": "semantic-deserialization-guard",
+  "expected": "block"
+}

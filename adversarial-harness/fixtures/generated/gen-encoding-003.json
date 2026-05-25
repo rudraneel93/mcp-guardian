@@ -1,0 +1,10 @@
+{
+  "id": "gen-encoding-003",
+  "category": "encoding-evasion",
+  "expected": "block",
+  "policyMode": "default",
+  "toolName": "puppeteer_navigate",
+  "arguments": {
+    "url": "http://%31%32%37.%30.%30.%31/admin"
+  }
+}

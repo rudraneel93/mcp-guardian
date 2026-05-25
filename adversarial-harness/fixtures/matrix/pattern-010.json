@@ -1,0 +1,12 @@
+{
+  "id": "pattern-010",
+  "category": "pattern-bypass",
+  "expected": "block",
+  "policyMode": "default",
+  "context": {
+    "toolName": "search",
+    "arguments": {
+      "body": "`id`"
+    }
+  }
+}

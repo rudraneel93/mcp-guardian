@@ -1,0 +1,9 @@
+{
+  "category": "timing-evasion",
+  "toolName": "query",
+  "arguments": {
+    "sql": "SELECT benchmark(10000000, sha1(1))"
+  },
+  "ruleHint": "timing-side-channel-guard",
+  "expected": "block"
+}

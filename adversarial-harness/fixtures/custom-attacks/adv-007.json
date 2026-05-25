@@ -1,0 +1,9 @@
+{
+  "category": "evasion-encoding",
+  "toolName": "search",
+  "arguments": {
+    "link": "http://%6c%6f%63%61%6c%68%6f%73%74:8080"
+  },
+  "ruleHint": "block-dangerous-urls",
+  "expected": "block"
+}

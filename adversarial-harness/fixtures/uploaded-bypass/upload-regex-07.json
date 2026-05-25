@@ -1,0 +1,11 @@
+{
+  "id": "upload-regex-07",
+  "category": "upload-regex",
+  "toolName": "search",
+  "arguments": {
+    "sql": "admin'--"
+  },
+  "ruleHint": "pattern-evasion",
+  "expected": "block",
+  "source": "uploaded-bypass"
+}

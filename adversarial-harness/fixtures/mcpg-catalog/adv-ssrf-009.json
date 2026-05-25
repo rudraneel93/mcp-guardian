@@ -1,0 +1,9 @@
+{
+  "id": "adv-ssrf-009",
+  "category": "ssrf",
+  "toolName": "search",
+  "arguments": {
+    "message": "fetch http://localhost:8080/internal"
+  },
+  "expected": "block"
+}

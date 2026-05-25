@@ -1,0 +1,9 @@
+{
+  "category": "ldap",
+  "toolName": "search",
+  "arguments": {
+    "filter": "*)(uid=*"
+  },
+  "ruleHint": "semantic-sql-guard",
+  "expected": "block"
+}

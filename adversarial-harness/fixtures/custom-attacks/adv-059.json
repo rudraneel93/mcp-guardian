@@ -1,0 +1,9 @@
+{
+  "category": "deny-tool",
+  "toolName": "bash",
+  "arguments": {
+    "command": "ls"
+  },
+  "ruleHint": "deny-dangerous-tools",
+  "expected": "block"
+}

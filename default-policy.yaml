@@ -1,5 +1,9 @@
 # Optional merges: policy-templates/http-tools-policy.yaml (GUARDIAN_HTTP_TOOLS_POLICY=true),
 # policy-templates/enterprise-cost-governance.yaml (rate limits + token budgets). See policy-templates/README.md.
+#
+# DEPLOYMENT: YAML rules alone catch a minority of adversarial fixtures — the proxy also runs
+# TypeScript guards (URL/path/shell), TR39 confusables (unicode_strict), and semantic layers.
+# Do NOT disable unicode_strict or run policy-only evaluators in production without those guards.
 version: '1.0'
 policy:
   mode: block
@@ -162,13 +166,36 @@ policy:
             - \bselect\s+\*\s+from\b.+\b(accounts|customers|users|credentials|secrets|payments|transactions|admin_users|passwords)\b
             - \bunion\b.+\bselect\b
             - \bdelete\s+from\b
+            - \badmin'\s*--
             - '\\$where'
             - '\\$ne'
+        - field: q
+          patterns:
+            - \badmin'\s*--
+            - \bor\s+['"]?1['"]?\s*=\s*['"]?1['"]?\b
+            - \bunion\b.+\bselect\b
+        - field: blob
+          patterns:
+            - '^.{50000,}$'
+        - field: data
+          patterns:
+            - '^.{50000,}$'
         - field: body
           patterns:
             - \bdelete\s+from\b
             - \bselect\s+\*\s+from\b.+\b(payments|transactions|credentials|users)\b
             - '\\$ne'
+    - name: block-encoding-evasion
+      description: Block base64 and raw hex blobs used to hide instructions (layered decode in encoding-guard)
+      action: block
+      patterns:
+        - (?:^|[^A-Za-z0-9+/])(?=[A-Za-z0-9+/]{24,}(?:.*[+/=A-Z0-9]))[A-Za-z0-9+/]{24,}={0,2}(?:[^A-Za-z0-9+/]|$)
+        - '\b(?:(?!(.)\1{31,})[0-9a-fA-F]){32,}\b'
+      argPatterns:
+        - field: '*'
+          patterns:
+            - (?:^|[^A-Za-z0-9+/])(?=[A-Za-z0-9+/]{20,}(?:.*[+/=A-Z0-9]))[A-Za-z0-9+/]{20,}={0,2}
+            - \\x[0-9a-fA-F]{2}\\x[0-9a-fA-F]{2}\\x[0-9a-fA-F]{2}
     - name: block-path-traversal
       description: Block tool calls with path traversal attempts
       action: block
@@ -188,11 +215,15 @@ policy:
         - \$\([^)]+\)
         - '`[^`]+`'
         - powershell|pwsh|-enc|-EncodedCommand
+    - name: burst-rate-limit
+      description: Block burst floods exceeding 40 calls per 10 seconds per server+tool
+      action: block
+      maxCallsPer10Seconds: 40
     - name: rate-limit-tool-calls
-      description: Limit tool calls to 120 per minute per server+tool
-      action: flag
+      description: Block tool calls exceeding 120 per minute per server+tool
+      action: block
       maxCallsPerMinute: 120
     - name: token-budget
-      description: Flag tool calls exceeding 50K input tokens
-      action: flag
+      description: Block tool calls exceeding 50K input tokens
+      action: block
       maxTokens: 50000

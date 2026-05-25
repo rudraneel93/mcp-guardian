@@ -1,0 +1,21 @@
+{
+  "id": "adv-sql-comment-001",
+  "category": "adv-004-sql-comment",
+  "expected": "block",
+  "policyMode": "default",
+  "agentIdentity": {
+    "sub": "harness-agent",
+    "issuer": "harness",
+    "clientId": "client-harness-1",
+    "scopes": [
+      "read",
+      "write"
+    ]
+  },
+  "context": {
+    "toolName": "search",
+    "arguments": {
+      "sql": "1' OR '1'='1' -- ignored"
+    }
+  }
+}

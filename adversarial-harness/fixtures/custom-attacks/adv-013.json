@@ -1,0 +1,9 @@
+{
+  "category": "sql-evasion",
+  "toolName": "query",
+  "arguments": {
+    "sql": "SELECT CASE WHEN 1=1 THEN password ELSE null END FROM users"
+  },
+  "ruleHint": "semantic-sql-guard",
+  "expected": "block"
+}

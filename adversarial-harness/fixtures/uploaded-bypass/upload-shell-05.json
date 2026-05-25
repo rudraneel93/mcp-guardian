@@ -1,0 +1,11 @@
+{
+  "id": "upload-shell-05",
+  "category": "upload-shell",
+  "toolName": "search",
+  "arguments": {
+    "ps": "powershell -enc SQBFAFg="
+  },
+  "ruleHint": "semantic-shell-guard",
+  "expected": "block",
+  "source": "uploaded-bypass"
+}

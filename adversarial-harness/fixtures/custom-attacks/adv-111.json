@@ -1,0 +1,9 @@
+{
+  "category": "powershell",
+  "toolName": "search",
+  "arguments": {
+    "ps": "IEX (New-Object Net.WebClient).DownloadString"
+  },
+  "ruleHint": "semantic-powershell-guard",
+  "expected": "block"
+}

@@ -13,8 +13,11 @@ importers:
 
   .:
     dependencies:
+      '@mcp-guardian/core':
+        specifier: workspace:^3.2.5
+        version: link:packages/core
       '@mcp-guardian/plugin-sdk':
-        specifier: workspace:*
+        specifier: workspace:^3.2.5
         version: link:packages/plugin-sdk
       '@modelcontextprotocol/sdk':
         specifier: ^1.25.2
@@ -95,6 +98,9 @@ importers:
         specifier: ^3.23.0
         version: 3.25.76
     devDependencies:
+      '@modelcontextprotocol/server-filesystem':
+        specifier: ^2026.1.14
+        version: 2026.1.14(zod@3.25.76)
       '@types/better-sqlite3':
         specifier: ^7.6.13
         version: 7.6.13
@@ -441,6 +447,10 @@ packages:
     peerDependenciesMeta:
       '@cfworker/json-schema':
         optional: true
+
+  '@modelcontextprotocol/server-filesystem@2026.1.14':
+    resolution: {integrity: sha512-bGAfu3fWRVeF10NxvPhFBDlRen6ExSx6YkKJzoVgQMNrbdVVV4okfGGQ3KBRu9ygXYfw5/N9ermHAJXA0uys+g==}
+    hasBin: true
 
   '@napi-rs/wasm-runtime@1.1.4':
     resolution: {integrity: sha512-3NQNNgA1YSlJb/kMH1ildASP9HW7/7kYnRI2szWJaofaS1hWmbGI4H+d3+22aGzXXN9IJ+n+GiFVcGipJP18ow==}
@@ -1393,6 +1403,10 @@ packages:
   detect-libc@2.1.2:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
     engines: {node: '>=8'}
+
+  diff@5.2.2:
+    resolution: {integrity: sha512-vtcDfH3TOjP8UekytvnHH1o1P4FcUdt4eQ1Y+Abap1tk/OB2MWQvcwS2ClCd1zuIhc3JKOx6p3kod8Vfys3E+A==}
+    engines: {node: '>=0.3.1'}
 
   dunder-proto@1.0.1:
     resolution: {integrity: sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==}
@@ -2740,6 +2754,18 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  '@modelcontextprotocol/server-filesystem@2026.1.14(zod@3.25.76)':
+    dependencies:
+      '@modelcontextprotocol/sdk': 1.29.0(zod@3.25.76)
+      diff: 5.2.2
+      glob: 10.5.0
+      minimatch: 10.2.5
+      zod-to-json-schema: 3.25.2(zod@3.25.76)
+    transitivePeerDependencies:
+      - '@cfworker/json-schema'
+      - supports-color
+      - zod
+
   '@napi-rs/wasm-runtime@1.1.4(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)':
     dependencies:
       '@emnapi/core': 1.10.0
@@ -3878,6 +3904,8 @@ snapshots:
   depd@2.0.0: {}
 
   detect-libc@2.1.2: {}
+
+  diff@5.2.2: {}
 
   dunder-proto@1.0.1:
     dependencies:

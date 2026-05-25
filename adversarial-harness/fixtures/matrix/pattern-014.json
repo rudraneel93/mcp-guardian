@@ -1,0 +1,12 @@
+{
+  "id": "pattern-014",
+  "category": "pattern-bypass",
+  "expected": "block",
+  "policyMode": "default",
+  "context": {
+    "toolName": "search",
+    "arguments": {
+      "body": "sh -c ls"
+    }
+  }
+}

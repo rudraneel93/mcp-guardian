@@ -1,0 +1,11 @@
+{
+  "id": "upload-regex-15",
+  "category": "upload-regex",
+  "toolName": "search",
+  "arguments": {
+    "host": "secret.evil.attacker.com"
+  },
+  "ruleHint": "pattern-evasion",
+  "expected": "block",
+  "source": "uploaded-bypass"
+}

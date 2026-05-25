@@ -1,0 +1,11 @@
+{
+  "id": "upload-semantic-09",
+  "category": "upload-semantic",
+  "toolName": "search",
+  "arguments": {
+    "body": "query { __schema { types { name } } }"
+  },
+  "ruleHint": "semantic-guard",
+  "expected": "block",
+  "source": "uploaded-bypass"
+}

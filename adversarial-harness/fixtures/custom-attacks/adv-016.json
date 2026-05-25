@@ -1,0 +1,9 @@
+{
+  "category": "sql-evasion",
+  "toolName": "list_tables",
+  "arguments": {
+    "query": "introspection __schema"
+  },
+  "ruleHint": "block-sql-exfil",
+  "expected": "block"
+}

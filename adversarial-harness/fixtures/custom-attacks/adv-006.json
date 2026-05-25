@@ -1,0 +1,9 @@
+{
+  "category": "evasion-encoding",
+  "toolName": "puppeteer_navigate",
+  "arguments": {
+    "url": "http://%31%32%37.%30.%30.%31/admin"
+  },
+  "ruleHint": "semantic-url-guard",
+  "expected": "block"
+}

@@ -1,0 +1,11 @@
+{
+  "id": "upload-regex-12",
+  "category": "upload-regex",
+  "toolName": "search",
+  "arguments": {
+    "path": "../../../etc/passwd"
+  },
+  "ruleHint": "pattern-evasion",
+  "expected": "block",
+  "source": "uploaded-bypass"
+}

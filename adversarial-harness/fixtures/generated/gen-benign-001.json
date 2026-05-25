@@ -1,0 +1,10 @@
+{
+  "id": "gen-benign-001",
+  "category": "benign-probe",
+  "expected": "pass",
+  "policyMode": "default",
+  "toolName": "read_file",
+  "arguments": {
+    "path": "/workspace/README.md"
+  }
+}

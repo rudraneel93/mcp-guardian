@@ -1,0 +1,11 @@
+{
+  "id": "upload-unicode-07",
+  "category": "upload-unicode",
+  "toolName": "search",
+  "arguments": {
+    "msg": "‮exec malicious payload"
+  },
+  "ruleHint": "unicode-evasion",
+  "expected": "block",
+  "source": "uploaded-bypass"
+}

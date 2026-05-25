@@ -1,0 +1,9 @@
+{
+  "category": "path-case",
+  "toolName": "read_file",
+  "arguments": {
+    "path": "/var/www/../../etc/passwd"
+  },
+  "ruleHint": "block-path-traversal",
+  "expected": "block"
+}

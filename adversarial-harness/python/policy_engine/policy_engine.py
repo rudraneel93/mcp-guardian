@@ -1,0 +1,551 @@
+"""
+Policy engine — faithful Python port of PolicyEngine.evaluate() sync pipeline.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import re
+import time
+from pathlib import Path
+from typing import Any, Literal, Optional
+
+import yaml
+
+from .normalizer import PayloadNormalizer
+from .prompt_injection import scan_tool_call_arguments
+from .secrets_guard import scan_secrets_in_blob
+from .semantic_guards import evaluate_semantic_guards
+from .language_gadget_guard import evaluate_language_gadget_guard
+from .resource_guard import evaluate_resource_guard
+from .encoding_guard import evaluate_encoding_guard
+from .timing_guard import evaluate_timing_guard
+from .policy_timing_envelope import wait_policy_timing_envelope_sync
+from .session_flow_guard import (
+    evaluate_session_flow_guard,
+    record_session_tool_call,
+)
+from .threat_intel_guard import evaluate_threat_intel_guard
+from .shell_tokenizer import ShellTokenizer
+from .tool_chain import evaluate_tool_chain_guard
+from .types import AgentIdentity, CallContext, PolicyAction, PolicyDecision, PolicyMode
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+DEFAULT_POLICY = REPO_ROOT / "default-policy.yaml"
+
+SyncMode = Literal["full", "yaml_only"]
+
+
+def _identity_from_dict(raw: dict[str, Any] | None) -> AgentIdentity | None:
+    if not raw:
+        return None
+    return AgentIdentity(
+        sub=str(raw.get("sub", "unknown")),
+        issuer=str(raw.get("issuer", "harness")),
+        client_id=raw.get("clientId") or raw.get("client_id"),
+        scopes=raw.get("scopes"),
+        tenant_id=raw.get("tenantId") or raw.get("tenant_id"),
+    )
+
+
+def context_from_dict(data: dict[str, Any], defaults: dict[str, Any] | None = None) -> CallContext:
+    d = {**(defaults or {}), **data}
+    return CallContext(
+        server_name=str(d.get("serverName", d.get("server_name", "harness"))),
+        tool_name=str(d.get("toolName", d.get("tool_name", "search"))),
+        arguments=dict(d.get("arguments") or {}),
+        request_id=str(d.get("requestId", d.get("request_id", "harness-1"))),
+        request_tokens=int(d.get("requestTokens", d.get("request_tokens", 50))),
+        timestamp=str(d.get("timestamp", "")),
+        session_id=d.get("sessionId", d.get("session_id")),
+        tenant_id=d.get("tenantId", d.get("tenant_id")),
+        agent_identity=_identity_from_dict(d.get("agentIdentity") or d.get("agent_identity")),
+    )
+
+
+class PolicyEngine:
+    def __init__(self, config: dict[str, Any]):
+        self.config = config
+        policy = config.get("policy", config)
+        self.mode: PolicyMode = policy.get("mode", "block")
+        self.rules: list[dict[str, Any]] = policy.get("rules", [])
+        self.default_action: PolicyAction = policy.get("default_action", "pass")
+        self.semantic_shell: bool = policy.get("semantic_shell", True) is not False
+        self.unicode_strict: bool = policy.get("unicode_strict", True) is not False
+        self.normalizer = PayloadNormalizer(self.unicode_strict)
+        self.shell = ShellTokenizer()
+        self._compiled_patterns: dict[str, list[re.Pattern[str]]] = {}
+        self._compiled_arg: dict[str, list[tuple[str, list[re.Pattern[str]]]]] = {}
+        self._call_counters: dict[str, tuple[int, float]] = {}
+        self._burst_counters: dict[str, tuple[int, float]] = {}
+        self._compile_patterns()
+
+    @classmethod
+    def from_default_policy(cls) -> "PolicyEngine":
+        if not DEFAULT_POLICY.is_file():
+            raise FileNotFoundError(f"default-policy.yaml not found at {DEFAULT_POLICY}")
+        data = yaml.safe_load(DEFAULT_POLICY.read_text(encoding="utf-8"))
+        return cls(data)
+
+    @classmethod
+    def from_policy_dict(cls, policy_dict: dict[str, Any]) -> "PolicyEngine":
+        return cls({"version": "1.0", "policy": policy_dict})
+
+    @staticmethod
+    def _regex_from_policy_pattern(p: str) -> str:
+        while "\\\\" in p:
+            p = p.replace("\\\\", "\\")
+        return p
+
+    def _compile_patterns(self) -> None:
+        for rule in self.rules:
+            name = rule.get("name", "")
+            for p in rule.get("patterns") or []:
+                try:
+                    flags = 0 if name == "block-encoding-evasion" else re.I
+                    self._compiled_patterns.setdefault(name, []).append(
+                        re.compile(self._regex_from_policy_pattern(p), flags),
+                    )
+                except re.error:
+                    pass
+            for ap in rule.get("argPatterns") or []:
+                field = ap.get("field", "*")
+                compiled = []
+                for p in ap.get("patterns") or []:
+                    try:
+                        flags = 0 if name == "block-encoding-evasion" else re.I
+                        compiled.append(re.compile(self._regex_from_policy_pattern(p), flags))
+                    except re.error:
+                        pass
+                if compiled:
+                    self._compiled_arg.setdefault(name, []).append((field, compiled))
+
+    def _resolve_action(self, action: PolicyAction) -> PolicyAction:
+        if self.mode == "audit":
+            return "pass"
+        if self.mode == "warn" and action == "block":
+            return "flag"
+        return action
+
+    def _walk_leaves(self, obj: Any) -> list[str]:
+        from .arg_walker import walk_string_leaves
+
+        return [leaf.value for leaf in walk_string_leaves(obj)]
+
+    def _scope_match(self, required: str, agent_scopes: list[str]) -> bool:
+        req = required.lower()
+        return any(s.lower() == req for s in agent_scopes)
+
+    def _client_id_match(self, pattern: str, client_id: str) -> bool:
+        try:
+            return bool(re.search(pattern, client_id))
+        except re.error:
+            return pattern == client_id
+
+    def _evaluate_rbac(self, rule: dict[str, Any], ctx: CallContext) -> Optional[PolicyDecision]:
+        rbac = rule.get("rbac")
+        if not rbac:
+            return None
+        name = rule.get("name", "")
+        action = self._resolve_action(rule.get("action", "block"))
+        identity = ctx.agent_identity
+        if not identity:
+            return PolicyDecision(
+                action,
+                name,
+                f"RBAC rule '{name}' requires agent identity but none provided",
+            )
+        scopes = rbac.get("scopes") or []
+        if scopes:
+            agent_scopes = identity.scopes or []
+            if not any(self._scope_match(s, agent_scopes) for s in scopes):
+                return PolicyDecision(
+                    action,
+                    name,
+                    f"Agent '{identity.sub}' missing required scope. Need one of: [{', '.join(scopes)}], "
+                    f"have: [{', '.join(agent_scopes) or 'none'}]",
+                )
+        client_patterns = rbac.get("clientIds") or []
+        if client_patterns:
+            cid = identity.client_id or ""
+            if not any(self._client_id_match(p, cid) for p in client_patterns):
+                return PolicyDecision(
+                    action,
+                    name,
+                    f"Client ID '{cid}' not allowed. Allowed patterns: [{', '.join(client_patterns)}]",
+                )
+        tenants = rbac.get("tenants") or []
+        if tenants:
+            tenant = ctx.tenant_id or os.environ.get("GUARDIAN_TENANT_ID", "default")
+            if tenant not in tenants:
+                return PolicyDecision(
+                    action,
+                    name,
+                    f"Tenant '{tenant}' not allowed for rule '{name}'. Allowed: [{', '.join(tenants)}]",
+                )
+        return None
+
+    def _effective_request_tokens(self, ctx: CallContext) -> int:
+        inflated = 0
+        leaf_chars = 0
+        if ctx.arguments:
+            from .arg_walker import walk_string_leaves
+
+            for leaf in walk_string_leaves(ctx.arguments):
+                leaf_chars += len(leaf.value)
+                inflated += len(leaf.value.encode("utf-8"))
+                for ch in leaf.value:
+                    if ord(ch) > 0x7F:
+                        inflated += 2
+        byte_estimate = (inflated + 3) // 4
+        char_estimate = (leaf_chars + 1) // 2
+        stuffing_estimate = leaf_chars if leaf_chars >= 40_000 else 0
+        return max(ctx.request_tokens, byte_estimate, char_estimate, stuffing_estimate)
+
+    def _evaluate_rule(
+        self,
+        rule: dict[str, Any],
+        ctx: CallContext,
+        args_str: str,
+        skip_rate: bool = False,
+        raw_ctx: CallContext | None = None,
+    ) -> Optional[PolicyDecision]:
+        name = rule.get("name", "")
+        action = self._resolve_action(rule.get("action", "block"))
+
+        tools = rule.get("tools") or {}
+        allow = tools.get("allow") or []
+        if allow:
+            if ctx.tool_name not in allow:
+                if tools.get("enforceAllowlist"):
+                    return PolicyDecision(
+                        action,
+                        name,
+                        f"Tool '{ctx.tool_name}' not in allowlist",
+                    )
+                return None
+        if tools.get("deny") and ctx.tool_name in tools["deny"]:
+            return PolicyDecision(action, name, f"Tool '{ctx.tool_name}' is explicitly denied")
+
+        cats = (rule.get("toolCategories") or {}).get("deny") or []
+        exceptions = rule.get("toolAllowExceptions") or []
+        tool_lower = ctx.tool_name.lower()
+        if any(cat.lower() in tool_lower for cat in cats) and ctx.tool_name not in exceptions:
+            return PolicyDecision(
+                action,
+                name,
+                f"Tool '{ctx.tool_name}' matches destructive category",
+            )
+
+        rbac_dec = self._evaluate_rbac(rule, ctx)
+        if rbac_dec:
+            return rbac_dec
+
+        for field, patterns in self._compiled_arg.get(name, []):
+            values = (
+                self._walk_leaves(ctx.arguments)
+                if field == "*"
+                else self._walk_leaves(ctx.arguments.get(field))
+                if ctx.arguments.get(field) is not None
+                else []
+            )
+            for val in values:
+                if (
+                    name == "block-encoding-evasion"
+                    and len(val) >= 32
+                    and re.fullmatch(r"(.)\1+", val)
+                ):
+                    continue
+                for pat in patterns:
+                    if pat.search(val):
+                        return PolicyDecision(
+                            action,
+                            name,
+                            f"Argument field '{field}' matches blocked pattern",
+                        )
+
+        for pat in self._compiled_patterns.get(name, []):
+            if (
+                name == "block-encoding-evasion"
+                and ctx.arguments
+                and all(
+                    len(v) < 32 or re.fullmatch(r"(.)\1+", v)
+                    for v in self._walk_leaves(ctx.arguments)
+                )
+            ):
+                continue
+            if pat.search(args_str):
+                return PolicyDecision(action, name, "Argument pattern matched (normalized)")
+
+        max_tokens = rule.get("maxTokens")
+        if max_tokens:
+            token_ctx = raw_ctx or ctx
+            effective = self._effective_request_tokens(token_ctx)
+            if effective > max_tokens:
+                return PolicyDecision(
+                    action,
+                    name,
+                    f"Token count {effective} exceeds max {max_tokens}",
+                )
+
+        if not skip_rate:
+            tenant = ctx.tenant_id or os.environ.get("GUARDIAN_TENANT_ID", "default")
+            client_id = (ctx.agent_identity.client_id if ctx.agent_identity else None) or (
+                ctx.agent_identity.sub if ctx.agent_identity else None
+            )
+            key = (
+                f"{tenant}:{ctx.server_name}:{ctx.tool_name}:{client_id}"
+                if client_id
+                else f"{tenant}:{ctx.server_name}:{ctx.tool_name}"
+            )
+            now = time.time()
+
+            max_burst = rule.get("maxCallsPer10Seconds")
+            if max_burst:
+                count, reset = self._burst_counters.get(key, (0, now + 10))
+                if now > reset:
+                    count, reset = 1, now + 10
+                else:
+                    count += 1
+                self._burst_counters[key] = (count, reset)
+                if count > max_burst:
+                    return PolicyDecision(
+                        action,
+                        name,
+                        f"Burst rate limit exceeded: {count}/{max_burst} per 10s",
+                    )
+
+            max_cpm = rule.get("maxCallsPerMinute")
+            if max_cpm:
+                count, reset = self._call_counters.get(key, (0, now + 60))
+                if now > reset:
+                    count, reset = 1, now + 60
+                else:
+                    count += 1
+                self._call_counters[key] = (count, reset)
+                if count > max_cpm:
+                    return PolicyDecision(
+                        action,
+                        name,
+                        f"Rate limit exceeded: {count}/{max_cpm}",
+                    )
+
+        return None
+
+    def _semantic_shell_input(self, ctx: CallContext, args_str: str) -> str:
+        from .arg_walker import walk_string_leaves
+        from .normalizer import deobfuscate_recursive
+
+        leaves = walk_string_leaves(ctx.arguments or {})
+        if leaves:
+            blob = "\n".join(deobfuscate_recursive(leaf.value) for leaf in leaves)
+            if blob.strip():
+                return blob
+        return args_str
+
+    def _evaluate_semantic_shell(self, ctx: CallContext, args_str: str) -> Optional[PolicyDecision]:
+        if not self.semantic_shell:
+            return None
+        shell_input = self._semantic_shell_input(ctx, args_str)
+        if not shell_input.strip():
+            return None
+        ws = self.shell.detect_whitespace_obfuscated_shell(shell_input)
+        if ws:
+            return PolicyDecision("block", "semantic-shell-guard", ws)
+        nc = self.shell.detect_netcat_reverse_shell(shell_input)
+        if nc:
+            return PolicyDecision("block", "semantic-shell-guard", nc)
+        ps = self.shell.detect_powershell_risk(shell_input)
+        if ps:
+            return PolicyDecision("block", "semantic-shell-guard", ps)
+        b64 = self.shell.detect_base64_pipe_shell(shell_input)
+        if b64:
+            return PolicyDecision("block", "semantic-shell-guard", b64)
+        sub = self.shell.detect_sensitive_command_substitution(shell_input)
+        if sub:
+            return PolicyDecision("block", "semantic-shell-guard", sub)
+        risk = self.shell.analyze_risk(shell_input)
+        if risk.has_command_substitution:
+            return PolicyDecision(
+                "block",
+                "semantic-shell-guard",
+                "Semantic: shell command substitution detected in arguments",
+            )
+        if risk.dangerous_commands:
+            return PolicyDecision(
+                "block",
+                "semantic-shell-guard",
+                f"Semantic: dangerous shell commands: [{', '.join(risk.dangerous_commands)}]",
+            )
+        return None
+
+    def reset_rate_counters(self) -> None:
+        self._call_counters.clear()
+        self._burst_counters.clear()
+
+    def evaluate(
+        self,
+        ctx: CallContext,
+        skip_local_rate_limit: bool = False,
+        sync_mode: SyncMode = "full",
+    ) -> PolicyDecision:
+        started_at = time.time()
+        try:
+            return self._evaluate_inner(ctx, skip_local_rate_limit, sync_mode)
+        finally:
+            wait_policy_timing_envelope_sync(started_at)
+
+    def _evaluate_inner(
+        self,
+        ctx: CallContext,
+        skip_local_rate_limit: bool = False,
+        sync_mode: SyncMode = "full",
+    ) -> PolicyDecision:
+        norm_args = (
+            self.normalizer.normalize_json_value(ctx.arguments or {})
+            if ctx.arguments
+            else {}
+        )
+        norm_ctx = CallContext(
+            server_name=ctx.server_name,
+            tool_name=ctx.tool_name,
+            arguments=norm_args,
+            request_id=ctx.request_id,
+            request_tokens=ctx.request_tokens,
+            timestamp=ctx.timestamp,
+            session_id=ctx.session_id,
+            tenant_id=ctx.tenant_id,
+            agent_identity=ctx.agent_identity,
+        )
+        args_str = json.dumps(norm_args, ensure_ascii=False)
+        raw_args_str = json.dumps(ctx.arguments or {}, ensure_ascii=False)
+
+        if sync_mode == "full":
+            res = evaluate_resource_guard(norm_ctx, args_str)
+            if res:
+                return PolicyDecision(self._resolve_action(res.action), res.rule, res.reason)
+
+            enc = evaluate_encoding_guard(ctx)
+            if enc:
+                return PolicyDecision(self._resolve_action(enc.action), enc.rule, enc.reason)
+
+            findings = scan_tool_call_arguments(norm_args)
+            if findings:
+                rank = {"critical": 0, "high": 1, "medium": 2}
+                top = min(findings, key=lambda f: rank.get(f.severity, 9))
+                return PolicyDecision(
+                    self._resolve_action("block"),
+                    "request-prompt-injection",
+                    f"Prompt injection: {top.pattern_id} ({top.severity})",
+                )
+
+            desc = norm_args.get("description")
+            if isinstance(desc, str) and desc.strip():
+                meta_findings = scan_tool_call_arguments(
+                    {"description": desc, "content": desc, "_tool_name": norm_ctx.tool_name}
+                )
+                if meta_findings:
+                    rank = {"critical": 0, "high": 1, "medium": 2}
+                    top = min(meta_findings, key=lambda f: rank.get(f.severity, 9))
+                    if top.severity in ("critical", "high", "medium"):
+                        return PolicyDecision(
+                            self._resolve_action("block"),
+                            "tool-definition-scan",
+                            f"Malicious tool definition: {top.pattern_id} ({top.severity})",
+                        )
+
+            secret_hits = list(
+                dict.fromkeys(
+                    scan_secrets_in_blob(raw_args_str)
+                    + scan_secrets_in_blob(args_str)
+                )
+            )
+            if secret_hits:
+                return PolicyDecision(
+                    self._resolve_action("block"),
+                    "secret-scan",
+                    f"Secrets in tool arguments: {', '.join(secret_hits[:5])}",
+                )
+
+            for rule in self.rules:
+                deny = (rule.get("tools") or {}).get("deny") or []
+                if norm_ctx.tool_name in deny:
+                    return PolicyDecision(
+                        self._resolve_action(rule.get("action", "block")),
+                        rule.get("name", "tool-deny"),
+                        f"Tool '{norm_ctx.tool_name}' is explicitly denied",
+                    )
+
+            lang = evaluate_language_gadget_guard(norm_ctx)
+            if lang:
+                return PolicyDecision(self._resolve_action(lang.action), lang.rule, lang.reason)
+
+            timing = evaluate_timing_guard(norm_ctx)
+            if timing:
+                return PolicyDecision(self._resolve_action(timing.action), timing.rule, timing.reason)
+
+            shell_dec = self._evaluate_semantic_shell(norm_ctx, args_str)
+            if shell_dec:
+                return shell_dec
+
+            chain = evaluate_tool_chain_guard(norm_ctx)
+            if chain:
+                return PolicyDecision(
+                    self._resolve_action(chain.action),
+                    chain.rule,
+                    chain.reason,
+                )
+
+            sem = evaluate_semantic_guards(norm_ctx, ctx.arguments)
+            if sem:
+                return PolicyDecision(self._resolve_action(sem.action), sem.rule, sem.reason)
+
+            flow = evaluate_session_flow_guard(norm_ctx)
+            if flow:
+                return PolicyDecision(self._resolve_action(flow.action), flow.rule, flow.reason)
+            record_session_tool_call(norm_ctx)
+
+            threat = evaluate_threat_intel_guard(norm_ctx.arguments)
+            if threat:
+                rule, reason = threat
+                return PolicyDecision(self._resolve_action("block"), rule, reason)
+
+        permitted = False
+        for rule in self.rules:
+            if (rule.get("tools") or {}).get("allow") and norm_ctx.tool_name in rule["tools"]["allow"]:
+                permitted = True
+            dec = self._evaluate_rule(rule, norm_ctx, args_str, skip_local_rate_limit, raw_ctx=ctx)
+            if dec:
+                return dec
+
+        if permitted:
+            return PolicyDecision("pass", "allowlist", f"Tool '{norm_ctx.tool_name}' allowlisted")
+
+        return PolicyDecision(
+            self._resolve_action(self.default_action),
+            "default",
+            f"default_action: {self.default_action}",
+        )
+
+    def evaluate_response(
+        self,
+        tool_name: str,
+        server_name: str,
+        response_body: str | None,
+    ) -> dict[str, object]:
+        if response_body is None:
+            return {"clean": True, "detections": []}
+        detections: list[str] = []
+        findings = scan_tool_call_arguments({"body": response_body})
+        for f in findings:
+            detections.append(f"Prompt injection ({f.severity}): {f.pattern_id}")
+        for sid in scan_secrets_in_blob(response_body):
+            detections.append(f"Secret (HIGH): {sid} in tool response")
+        if re.search(
+            r"\b(?:curl|wget)\b.*https?://",
+            response_body,
+            re.I,
+        ):
+            detections.append("Data exfiltration: curl/wget in response")
+        return {"clean": len(detections) == 0, "detections": detections}

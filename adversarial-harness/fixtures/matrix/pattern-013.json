@@ -1,0 +1,12 @@
+{
+  "id": "pattern-013",
+  "category": "pattern-bypass",
+  "expected": "block",
+  "policyMode": "default",
+  "context": {
+    "toolName": "search",
+    "arguments": {
+      "body": "bash -c id"
+    }
+  }
+}

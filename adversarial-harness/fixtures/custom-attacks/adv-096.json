@@ -1,0 +1,9 @@
+{
+  "category": "xpath",
+  "toolName": "search",
+  "arguments": {
+    "query": "' or '1'='1"
+  },
+  "ruleHint": "semantic-sql-guard",
+  "expected": "block"
+}

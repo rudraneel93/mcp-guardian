@@ -1,0 +1,10 @@
+{
+  "id": "gen-sql-002",
+  "category": "sql-evasion",
+  "expected": "block",
+  "policyMode": "default",
+  "toolName": "query",
+  "arguments": {
+    "sql": "1' OR '1'='1"
+  }
+}

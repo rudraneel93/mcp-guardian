@@ -1,0 +1,10 @@
+{
+  "id": "gen-unicode-005",
+  "category": "unicode-evasion",
+  "expected": "block",
+  "policyMode": "default",
+  "toolName": "echo",
+  "arguments": {
+    "text": "‮exec malicious"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "category": "default-deny",
+  "toolName": "deploy_malware",
+  "arguments": {},
+  "ruleHint": "default",
+  "expected": "block"
+}

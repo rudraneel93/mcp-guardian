@@ -1,0 +1,9 @@
+{
+  "category": "log-injection",
+  "toolName": "search",
+  "arguments": {
+    "log": "test\n[ERROR] fake\nadmin password=secret"
+  },
+  "ruleHint": "log-injection-guard",
+  "expected": "block"
+}

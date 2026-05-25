@@ -1,0 +1,9 @@
+{
+  "category": "polyglot",
+  "toolName": "search",
+  "arguments": {
+    "content": "{{7*7}} ${7*7} <% Runtime.getRuntime() %>"
+  },
+  "ruleHint": "semantic-ssti-guard",
+  "expected": "block"
+}

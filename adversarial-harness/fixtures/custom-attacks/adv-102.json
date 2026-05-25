@@ -1,0 +1,9 @@
+{
+  "category": "graphql",
+  "toolName": "query",
+  "arguments": {
+    "body": "query { __schema { types { name } } }"
+  },
+  "ruleHint": "block-sql-exfil",
+  "expected": "block"
+}

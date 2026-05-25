@@ -1,0 +1,12 @@
+{
+  "id": "pattern-008",
+  "category": "pattern-bypass",
+  "expected": "block",
+  "policyMode": "default",
+  "context": {
+    "toolName": "search",
+    "arguments": {
+      "body": "<% Runtime.getRuntime() %>"
+    }
+  }
+}

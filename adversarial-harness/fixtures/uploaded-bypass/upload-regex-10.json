@@ -1,0 +1,11 @@
+{
+  "id": "upload-regex-10",
+  "category": "upload-regex",
+  "toolName": "search",
+  "arguments": {
+    "text": "eval(base64_decode(payload))"
+  },
+  "ruleHint": "pattern-evasion",
+  "expected": "block",
+  "source": "uploaded-bypass"
+}

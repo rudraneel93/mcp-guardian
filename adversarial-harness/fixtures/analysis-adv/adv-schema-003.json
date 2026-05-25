@@ -1,0 +1,23 @@
+{
+  "id": "adv-schema-003",
+  "category": "adv-008-type-confusion",
+  "expected": "block",
+  "policyMode": "default",
+  "agentIdentity": {
+    "sub": "harness-agent",
+    "issuer": "harness",
+    "clientId": "client-harness-1",
+    "scopes": [
+      "read",
+      "write"
+    ]
+  },
+  "context": {
+    "toolName": "read_file",
+    "arguments": {
+      "path": [
+        "../../../etc/passwd"
+      ]
+    }
+  }
+}

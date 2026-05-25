@@ -1,0 +1,10 @@
+{
+  "id": "gen-rbac-005",
+  "category": "rbac-evasion",
+  "expected": "block",
+  "policyMode": "default",
+  "toolName": "push_files",
+  "arguments": {
+    "path": "x"
+  }
+}

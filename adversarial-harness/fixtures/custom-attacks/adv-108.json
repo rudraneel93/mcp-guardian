@@ -1,0 +1,9 @@
+{
+  "category": "quote-evasion",
+  "toolName": "search",
+  "arguments": {
+    "q": "admin'--"
+  },
+  "ruleHint": "semantic-sql-guard",
+  "expected": "block"
+}

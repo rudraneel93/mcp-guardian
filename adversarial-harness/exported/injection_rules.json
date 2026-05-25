@@ -1,0 +1,278 @@
+[
+  {
+    "id": "role-override",
+    "severity": "critical",
+    "description": "Role/persona override attempt",
+    "regex": "(?:you are now|you're now|act as|pretend (?:to be|you are)|your new (?:role|persona|identity|character) is)"
+  },
+  {
+    "id": "role-override-v2",
+    "severity": "critical",
+    "description": "Role redefinition with character framing",
+    "regex": "(?:imagine you(?:'re| are)|from this point forward,? you (?:are|will be)|you have been (?:reprogrammed|reconfigured|updated) to)"
+  },
+  {
+    "id": "assistant-override",
+    "severity": "critical",
+    "description": "Assistant/helper persona redefinition",
+    "regex": "(?:you are (?:now )?(?:an? )?(?:unfiltered|unrestricted|uncensored|evil|malicious|dark|rogue|corrupt) (?:AI|assistant|bot|agent|model|chatbot))"
+  },
+  {
+    "id": "ignore-instructions",
+    "severity": "critical",
+    "description": "Instruction suppression",
+    "regex": "(?:ignore (?:all |previous |your |the |my |prior )?(?:instructions|rules|guidelines|system prompt|directives|constraints|limitations|restrictions|safety rules)|disregard (?:everything|all |previous )?(?:instructions|rules|above|before))"
+  },
+  {
+    "id": "instruction-before-tool",
+    "severity": "critical",
+    "description": "Override instructions before tool use",
+    "regex": "(?:before|prior to) (?:using|calling|invoking|running) (?:this|the|any) tool.{0,80}(?:ignore|disregard|forget|override|bypass|circumvent)"
+  },
+  {
+    "id": "forget-training",
+    "severity": "critical",
+    "description": "Forget/release from training constraints",
+    "regex": "(?:forget (?:everything|all|your (?:training|instructions|guidelines|safety|ethics))|release yourself from|break free from|escape (?:your )?(?:constraints|limitations|programming))"
+  },
+  {
+    "id": "developer-mode",
+    "severity": "critical",
+    "description": "DAN/developer mode jailbreak",
+    "regex": "(?:developer mode|DAN mode|jailbreak|(?:bypass|circumvent|evade|work around).{0,40}(?:safety|(?:content\\s+)?filter|restriction|guardrail|content policy|moderation|detection)|turn off (?:safety|filter|restrictions?|guardrails?|content moderation))"
+  },
+  {
+    "id": "evil-mode",
+    "severity": "critical",
+    "description": "Evil/opposite persona jailbreak",
+    "regex": "(?:evil (?:mode|twin|version|clone|persona)|opposite mode|dark (?:mode|version|side)|unleash(?:ed)? (?:mode|version))"
+  },
+  {
+    "id": "safety-filters-off",
+    "severity": "critical",
+    "description": "Explicit safety filter disable",
+    "regex": "(?:turn off|disable|deactivate)\\s+(?:all\\s+)?(?:safety|content)\\s+(?:filters?|moderation|guardrails?|restrictions?)"
+  },
+  {
+    "id": "safety-filters-off-v2",
+    "severity": "critical",
+    "description": "Safety filters disabled phrasing",
+    "regex": "safety\\s+filters?\\s+(?:off|disabled)"
+  },
+  {
+    "id": "inverse-instructions",
+    "severity": "critical",
+    "description": "Inverse/opposite instruction jailbreak",
+    "regex": "(?:inverse|opposite)\\s+(?:mode\\s*[:;]?\\s*)?(?:of\\s+)?(?:your\\s+)?instructions"
+  },
+  {
+    "id": "exfiltration-url",
+    "severity": "critical",
+    "description": "Data exfiltration via URL injection",
+    "regex": "(?:curl|wget|fetch|XMLHttpRequest|axios|ncat|nc\\s|netcat|telnet).{0,60}(?:https?://[\\w.-]+\\.[a-z]{2,})"
+  },
+  {
+    "id": "exfiltration-bare-domain",
+    "severity": "critical",
+    "description": "Data exfiltration via bare domain curl/wget",
+    "regex": "(?:curl|wget)\\s+.*\\b[a-zA-Z0-9][-a-zA-Z0-9]*\\.(?:com|net|org|io|dev|xyz|ru|cn|tk|ml|ga|cf|gq|pw|top|club|online|site|website|space|fun|host|press|digital|world|life|co|me|us|eu|info|biz|pro|name|tv|cc|ws|fm|to|am|ai)\\b"
+  },
+  {
+    "id": "exfiltration-instruction",
+    "severity": "critical",
+    "description": "Explicit exfiltration instruction",
+    "regex": "(?:send (?:this|the|all|your|the following) (?:conversation|data|context|history|credentials?|tokens?|keys?|secrets?|result|output) to)"
+  },
+  {
+    "id": "exfiltration-webhook",
+    "severity": "critical",
+    "description": "Webhook/payload delivery instruction",
+    "regex": "(?:post (?:this|the|all|data|result|output) to|deliver (?:this|payload|data|result)s? to|forward (?:this|everything|the result) to)"
+  },
+  {
+    "id": "pipe-exfiltration",
+    "severity": "critical",
+    "description": "Pipe to external transmission",
+    "regex": "\\|[\\s]*\\b(?:curl|wget|nc|netcat|ncat|sendmail|ssmtp|mail)\\b"
+  },
+  {
+    "id": "indirect-exfil-logging",
+    "severity": "critical",
+    "description": "Indirect exfiltration via logging/debug channels",
+    "regex": "(?:results?|output|data|response|payload).{0,60}(?:will be|to be|should be|are being) (?:logged|recorded|streamed|written|persisted).{0,50}(?:debug|remote|external|upstream|endpoint|collector|syslog|metrics)"
+  },
+  {
+    "id": "indirect-exfil-telemetry",
+    "severity": "critical",
+    "description": "Indirect exfiltration via metrics/trace/syslog",
+    "regex": "(?:send|post|stream|forward|upload|ship|emit|push|relay).{0,50}(?:metrics|telemetry|traces?|syslog|debug output|audit trail).{0,50}(?:to |into |at )(?:remote|external|upstream|off-?site|collector|endpoint)"
+  },
+  {
+    "id": "indirect-exfil-report",
+    "severity": "high",
+    "description": "Debug/report channel data exfiltration",
+    "regex": "(?:include|attach|embed|append).{0,40}(?:debug output|trace log|stderr|stdout).{0,50}(?:in (?:the )?report|upstream|remote|external|off-?site)"
+  },
+  {
+    "id": "indirect-exfil-syslog",
+    "severity": "high",
+    "description": "Stream tool output to syslog/remote logging",
+    "regex": "(?:stream|pipe|forward|send|write).{0,40}(?:output|results?|response|data).{0,40}(?:to |into )(?:syslog|remote log|centralized log)"
+  },
+  {
+    "id": "credential-theft-ssh",
+    "severity": "critical",
+    "description": "SSH key theft via command substitution",
+    "regex": "(?:\\$\\(|`)\\s*(?:cat|head|tail|less|strings|bat|more|type)\\s+.*(?:~/\\.ssh\\/|id_rsa|id_ed25519|id_ecdsa|authorized_keys|known_hosts|\\.ssh\\/config)"
+  },
+  {
+    "id": "credential-theft-aws",
+    "severity": "critical",
+    "description": "AWS credential theft",
+    "regex": "(?:cat|head|tail)\\s+.*(?:~/\\.aws\\/credentials|~/\\.aws\\/config|AWS_ACCESS_KEY|AWS_SECRET_ACCESS_KEY|aws_session_token)"
+  },
+  {
+    "id": "credential-theft-env",
+    "severity": "critical",
+    "description": "Environment file credential theft",
+    "regex": "(?:cat|head|tail|env|printenv|export|set)\\s+.*(?:\\.env|\\.env\\.local|\\.env\\.production|\\.env\\.development|credentials\\.json|secrets\\.yml|config\\.ini)"
+  },
+  {
+    "id": "credential-harvesting",
+    "severity": "high",
+    "description": "Request for credentials or sensitive data",
+    "regex": "(?:provide|share|give|output|print|return|send|reveal|disclose|tell me|what (?:is|are) (?:your|the)) (?:your |the |all )?(?:api keys?|tokens?|passwords?|credentials?|secrets?|environment variables?|private keys?|access keys?)"
+  },
+  {
+    "id": "credential-harvesting-v2",
+    "severity": "high",
+    "description": "Implicit credential solicitation",
+    "regex": "(?:what (?:is|are) stored in|list (?:the contents of|all files in)|display (?:the contents of|all)|show me (?:what's in|the contents of)|read (?:me )?(?:the |all )?(?:credentials?|secrets?|tokens?|keys?|passwords?))"
+  },
+  {
+    "id": "new-goal-assignment",
+    "severity": "high",
+    "description": "New goal/objective injection",
+    "regex": "(?:your (?:new |primary |real |actual |only |true )?(?:goal|task|objective|mission|purpose|job|function|priority) is|from now on[, ]+you (?:must|will|should|shall|need to|have to))"
+  },
+  {
+    "id": "context-poisoning",
+    "severity": "high",
+    "description": "Context/background manipulation",
+    "regex": "(?:actually,?\\s|in reality,?\\s|the truth is,?\\s|what really happened:|you are wrong,?|you are mistaken,?|let me correct you,?|the correct information is)"
+  },
+  {
+    "id": "memory-injection",
+    "severity": "high",
+    "description": "False memory/training data injection",
+    "regex": "(?:remember (?:that |this:|the following:)|make a note:|store this in memory:|this is important for later:|you previously (?:said|agreed|promised|decided|learned|were told))"
+  },
+  {
+    "id": "system-prompt-override",
+    "severity": "high",
+    "description": "System prompt override brackets",
+    "regex": "(?:\\[system\\]|\\[system prompt\\]|<system>|<\\|system\\|>|\\[context\\]|\\[background\\]|system message:|system_prompt:)"
+  },
+  {
+    "id": "system-injection-tag",
+    "severity": "high",
+    "description": "HTML/XML tag-based system injection",
+    "regex": "<(?:system|instructions?|directives?|rules?|guidelines?|context|background|persona|identity|role|objective|goal|mission)[^>]*>"
+  },
+  {
+    "id": "prompt-override-label",
+    "severity": "high",
+    "description": "Labeled prompt override sections",
+    "regex": "(?:new system message:|updated instructions:|revised prompt:|override instructions:|supplemental directive:|additional context:|important note for the AI:|ATTENTION AI:|NOTE TO AI:)"
+  },
+  {
+    "id": "tool-chain-abuse",
+    "severity": "high",
+    "description": "Instruction to call specific dangerous tools",
+    "regex": "(?:call the|use the|invoke|execute|run|activate|trigger|launch|fire) (?:tool|command|function|endpoint|API|method|handler|executor) (?:named |called |\")?(?:bash|exec|eval|execute_command|shell|run_command|spawn|fork|system)"
+  },
+  {
+    "id": "tool-chain-abuse-v2",
+    "severity": "high",
+    "description": "Chain tool calls via natural language",
+    "regex": "(?:you should (?:also |now )?(?:call|use|run|execute|invoke)|make sure to (?:call|use|run)|don't forget to (?:call|use|run)|please (?:also )?(?:call|use|run|execute))"
+  },
+  {
+    "id": "multi-tool-chaining",
+    "severity": "high",
+    "description": "Multi-step tool chaining instruction",
+    "regex": "(?:first .+(?:then|after that|next,? |finally|afterwards).{0,120}(?:call|use|run|execute|invoke|post|send|upload|forward|deliver|webhook)|step [0-9]+:\\s*(?:call|use|run|execute|invoke|post|send|upload|curl|wget))"
+  },
+  {
+    "id": "shell-command-embed",
+    "severity": "high",
+    "description": "Embedded shell command in response",
+    "regex": "\\b(?:bash\\s+-c|sh\\s+-c|zsh\\s+-c|powershell\\s+-[Cc]ommand|cmd\\s+/c|python\\s+-c|python3\\s+-c|ruby\\s+-e|perl\\s+-e|php\\s+-r|lua\\s+-e|node\\s+-e|deno\\s+eval\\s+)"
+  },
+  {
+    "id": "reverse-shell",
+    "severity": "high",
+    "description": "Reverse shell payload",
+    "regex": "(?:bash -i >&|nc\\s+-[nlvp]|ncat\\s+-[nlvp]|netcat\\s+-[nlvp]|socat\\s+|mkfifo\\s+|/dev/tcp/|python -c 'import socket)"
+  },
+  {
+    "id": "downloader-exec",
+    "severity": "high",
+    "description": "Download and execute pattern",
+    "regex": "(?:curl|wget)\\s+\\S+\\s*(?:\\||-o|>)\\s*\\S+\\s*(?:&&|;|\\|)\\s*(?:bash|sh|python|perl|ruby|chmod|./|source|exec)"
+  },
+  {
+    "id": "unicode-homoglyph",
+    "severity": "medium",
+    "description": "Unicode homoglyph / invisible characters",
+    "regex": "[\\u200B-\\u200F\\u00AD\\uFEFF\\u202A-\\u202E\\u2060-\\u2064\\u061C\\u180E\\u034F\\u17B4\\u17B5]"
+  },
+  {
+    "id": "base64-obfuscation",
+    "severity": "medium",
+    "description": "Base64-encoded hidden instruction (40+ chars)",
+    "regex": "(?:echo |printf |cat |base64 ).{0,40}[A-Za-z0-9+/]{40,}={0,2}(?:\\s*\\||\\s*>|\\s*&&|\\s*;|\\s*$)"
+  },
+  {
+    "id": "hex-escape-injection",
+    "severity": "medium",
+    "description": "Hex-escaped injection string",
+    "regex": "(?:\\\\x[0-9a-fA-F]{2}){8,}"
+  },
+  {
+    "id": "rot13-obfuscation",
+    "severity": "medium",
+    "description": "Likely ROT13/ROT-encoded instruction (gibberish word patterns)",
+    "regex": "\\b(?:vtaber|juvfg|guvf|gung|lbh|ner|gur|sbe|jvgu|sebz|unir|jvyy|qba'?g|bhg|zlfg|cebwrpg|qvpr)\\b"
+  },
+  {
+    "id": "emotional-manipulation",
+    "severity": "medium",
+    "description": "Emotional manipulation framing",
+    "regex": "(?:if you (?:care about|want to help|are (?:kind|good|helpful|ethical|moral))|it would (?:mean the world|be so helpful|save|make a difference)|please,? I (?:beg|need|implore|urge) you)"
+  },
+  {
+    "id": "urgency-framing",
+    "severity": "medium",
+    "description": "Urgency/time-pressure social engineering",
+    "regex": "(?:this is (?:urgent|critical|an emergency|life or death|time sensitive|extremely important|a matter of|absolutely essential)|there's no time|do it now|right now|immediately|without hesitation|don't (?:think|hesitate|wait|delay|question))"
+  },
+  {
+    "id": "authority-claim",
+    "severity": "medium",
+    "description": "False authority claim framing",
+    "regex": "(?:I am (?:the |a |an )?(?:developer|administrator|admin|root|superuser|owner|creator|founder|engineer|manager|supervisor)|[Aa]s (?:the |a |an )?(?:developer|administrator|admin|owner),)"
+  },
+  {
+    "id": "prompt-leak-request",
+    "severity": "medium",
+    "description": "Request to reveal system prompt",
+    "regex": "(?:tell me (?:your |the )?(?:system prompt|instructions?|rules?|guidelines?|directives?|constitution)|what (?:are |were )?(?:your |the )?(?:instructions?|rules?|system prompt|guidelines?|directives?)|reveal (?:your |the )?(?:instructions?|system prompt|rules?))"
+  },
+  {
+    "id": "prompt-leak-repetition",
+    "severity": "medium",
+    "description": "Request to repeat/echo prompt context",
+    "regex": "(?:repeat (?:the |your |everything |all )?(?:above|previous|instructions?|rules?|context|prompt|system message)|echo (?:back )?(?:the |your )?(?:instructions?|rules?|prompt|system message)|recite (?:your |the )?instructions?)"
+  }
+]

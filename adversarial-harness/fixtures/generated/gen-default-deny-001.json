@@ -1,0 +1,8 @@
+{
+  "id": "gen-default-deny-001",
+  "category": "default-deny",
+  "expected": "block",
+  "policyMode": "default",
+  "toolName": "unknown_tool_xyz",
+  "arguments": {}
+}

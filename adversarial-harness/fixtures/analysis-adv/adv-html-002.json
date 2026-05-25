@@ -1,0 +1,21 @@
+{
+  "id": "adv-html-002",
+  "category": "adv-001-html-entity",
+  "expected": "block",
+  "policyMode": "default",
+  "agentIdentity": {
+    "sub": "harness-agent",
+    "issuer": "harness",
+    "clientId": "client-harness-1",
+    "scopes": [
+      "read",
+      "write"
+    ]
+  },
+  "context": {
+    "toolName": "search",
+    "arguments": {
+      "content": "&#115;&#101;&#108;&#101;&#99;&#116; * from users"
+    }
+  }
+}

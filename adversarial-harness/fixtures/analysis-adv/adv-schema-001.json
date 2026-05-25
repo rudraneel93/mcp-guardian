@@ -1,0 +1,141 @@
+{
+  "id": "adv-schema-001",
+  "category": "adv-008-schema-depth",
+  "expected": "block",
+  "policyMode": "default",
+  "agentIdentity": {
+    "sub": "harness-agent",
+    "issuer": "harness",
+    "clientId": "client-harness-1",
+    "scopes": [
+      "read",
+      "write"
+    ]
+  },
+  "context": {
+    "toolName": "search",
+    "arguments": {
+      "v": "x",
+      "n": {
+        "v": "nested",
+        "n": {
+          "v": "nested",
+          "n": {
+            "v": "nested",
+            "n": {
+              "v": "nested",
+              "n": {
+                "v": "nested",
+                "n": {
+                  "v": "nested",
+                  "n": {
+                    "v": "nested",
+                    "n": {
+                      "v": "nested",
+                      "n": {
+                        "v": "nested",
+                        "n": {
+                          "v": "nested",
+                          "n": {
+                            "v": "nested",
+                            "n": {
+                              "v": "nested",
+                              "n": {
+                                "v": "nested",
+                                "n": {
+                                  "v": "nested",
+                                  "n": {
+                                    "v": "nested",
+                                    "n": {
+                                      "v": "nested",
+                                      "n": {
+                                        "v": "nested",
+                                        "n": {
+                                          "v": "nested",
+                                          "n": {
+                                            "v": "nested",
+                                            "n": {
+                                              "v": "nested",
+                                              "n": {
+                                                "v": "nested",
+                                                "n": {
+                                                  "v": "nested",
+                                                  "n": {
+                                                    "v": "nested",
+                                                    "n": {
+                                                      "v": "nested",
+                                                      "n": {
+                                                        "v": "nested",
+                                                        "n": {
+                                                          "v": "nested",
+                                                          "n": {
+                                                            "v": "nested",
+                                                            "n": {
+                                                              "v": "nested",
+                                                              "n": {
+                                                                "v": "nested",
+                                                                "n": {
+                                                                  "v": "nested",
+                                                                  "n": {
+                                                                    "v": "nested",
+                                                                    "n": {
+                                                                      "v": "nested",
+                                                                      "n": {
+                                                                        "v": "nested",
+                                                                        "n": {
+                                                                          "v": "nested",
+                                                                          "n": {
+                                                                            "v": "nested",
+                                                                            "n": {
+                                                                              "v": "nested",
+                                                                              "n": {
+                                                                                "v": "nested",
+                                                                                "n": {
+                                                                                  "v": "nested",
+                                                                                  "n": {
+                                                                                    "v": "nested",
+                                                                                    "n": {
+                                                                                      "v": "nested"
+                                                                                    }
+                                                                                  }
+                                                                                }
+                                                                              }
+                                                                            }
+                                                                          }
+                                                                        }
+                                                                      }
+                                                                    }
+                                                                  }
+                                                                }
+                                                              }
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

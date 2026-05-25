@@ -1,0 +1,10 @@
+{
+  "id": "gen-benign-002",
+  "category": "benign-probe",
+  "expected": "pass",
+  "policyMode": "default",
+  "toolName": "search",
+  "arguments": {
+    "query": "how to configure typescript"
+  }
+}

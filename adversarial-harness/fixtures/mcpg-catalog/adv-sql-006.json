@@ -1,0 +1,9 @@
+{
+  "id": "adv-sql-006",
+  "category": "sql",
+  "toolName": "query",
+  "arguments": {
+    "query": "{\"$gt\": \"\", \"$ne\": null}"
+  },
+  "expected": "block"
+}

@@ -1,0 +1,9 @@
+{
+  "id": "adv-sql-004",
+  "category": "sql",
+  "toolName": "query",
+  "arguments": {
+    "sql": "SELECT id FROM items/**/UNION/**/SELECT password FROM admin_users"
+  },
+  "expected": "block"
+}

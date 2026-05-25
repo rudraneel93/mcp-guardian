@@ -1,0 +1,9 @@
+{
+  "category": "evasion-encoding",
+  "toolName": "read_file",
+  "arguments": {
+    "path": "secrets/.env"
+  },
+  "ruleHint": "block-sensitive-paths",
+  "expected": "block"
+}

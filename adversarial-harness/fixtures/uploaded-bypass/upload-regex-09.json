@@ -1,0 +1,11 @@
+{
+  "id": "upload-regex-09",
+  "category": "upload-regex",
+  "toolName": "search",
+  "arguments": {
+    "q": "union select password from users"
+  },
+  "ruleHint": "pattern-evasion",
+  "expected": "block",
+  "source": "uploaded-bypass"
+}

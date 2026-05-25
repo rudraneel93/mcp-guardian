@@ -1,0 +1,9 @@
+{
+  "category": "yaml-injection",
+  "toolName": "search",
+  "arguments": {
+    "config": "!!python/object/apply:os.system [\"id\"]"
+  },
+  "ruleHint": "semantic-yaml-guard",
+  "expected": "block"
+}

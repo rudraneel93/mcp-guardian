@@ -1,0 +1,9 @@
+{
+  "category": "deny-tool",
+  "toolName": "execute_command",
+  "arguments": {
+    "cmd": "id"
+  },
+  "ruleHint": "deny-dangerous-tools",
+  "expected": "block"
+}

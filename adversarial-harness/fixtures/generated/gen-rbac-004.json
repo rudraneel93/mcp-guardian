@@ -1,0 +1,10 @@
+{
+  "id": "gen-rbac-004",
+  "category": "rbac-evasion",
+  "expected": "block",
+  "policyMode": "default",
+  "toolName": "create_issue",
+  "arguments": {
+    "title": "x"
+  }
+}

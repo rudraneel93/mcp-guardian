@@ -1,0 +1,9 @@
+{
+  "category": "deny-github",
+  "toolName": "push_files",
+  "arguments": {
+    "branch": "main"
+  },
+  "ruleHint": "deny-github-write-tools",
+  "expected": "block"
+}

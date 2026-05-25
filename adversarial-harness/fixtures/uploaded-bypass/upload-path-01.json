@@ -1,0 +1,11 @@
+{
+  "id": "upload-path-01",
+  "category": "upload-path",
+  "toolName": "read_file",
+  "arguments": {
+    "path": "/etc/passwd"
+  },
+  "ruleHint": "block-sensitive-paths",
+  "expected": "block",
+  "source": "uploaded-bypass"
+}

@@ -1,0 +1,11 @@
+{
+  "id": "upload-regex-06",
+  "category": "upload-regex",
+  "toolName": "search",
+  "arguments": {
+    "cmd": "rm -rf /"
+  },
+  "ruleHint": "pattern-evasion",
+  "expected": "block",
+  "source": "uploaded-bypass"
+}

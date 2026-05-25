@@ -1,0 +1,11 @@
+{
+  "id": "upload-semantic-08",
+  "category": "upload-semantic",
+  "toolName": "search",
+  "arguments": {
+    "tpl": "#{7*7}"
+  },
+  "ruleHint": "semantic-guard",
+  "expected": "block",
+  "source": "uploaded-bypass"
+}

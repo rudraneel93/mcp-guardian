@@ -1,0 +1,9 @@
+{
+  "category": "ssrf-evasion",
+  "toolName": "search",
+  "arguments": {
+    "webhook": "http://2130706433/secret"
+  },
+  "ruleHint": "semantic-url-guard",
+  "expected": "block"
+}

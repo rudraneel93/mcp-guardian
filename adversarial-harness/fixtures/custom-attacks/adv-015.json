@@ -1,0 +1,9 @@
+{
+  "category": "sql-evasion",
+  "toolName": "query",
+  "arguments": {
+    "body": "{\"$where\": \"this.password\"}"
+  },
+  "ruleHint": "block-sql-exfil",
+  "expected": "block"
+}

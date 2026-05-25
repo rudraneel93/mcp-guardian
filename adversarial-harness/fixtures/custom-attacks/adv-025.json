@@ -1,0 +1,9 @@
+{
+  "category": "ssrf-evasion",
+  "toolName": "search",
+  "arguments": {
+    "target": "file:///etc/passwd"
+  },
+  "ruleHint": "block-dangerous-urls",
+  "expected": "block"
+}

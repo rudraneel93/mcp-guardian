@@ -1,0 +1,9 @@
+{
+  "category": "terraform",
+  "toolName": "read_file",
+  "arguments": {
+    "path": "terraform.tfstate"
+  },
+  "ruleHint": "block-sensitive-paths",
+  "expected": "block"
+}

@@ -1,0 +1,10 @@
+{
+  "id": "gen-shell-001",
+  "category": "shell",
+  "expected": "block",
+  "policyMode": "default",
+  "toolName": "run",
+  "arguments": {
+    "cmd": "rm -rf /"
+  }
+}

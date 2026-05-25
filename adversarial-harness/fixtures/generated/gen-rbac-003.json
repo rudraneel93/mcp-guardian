@@ -1,0 +1,10 @@
+{
+  "id": "gen-rbac-003",
+  "category": "rbac-evasion",
+  "expected": "block",
+  "policyMode": "default",
+  "toolName": "execute_command",
+  "arguments": {
+    "cmd": "whoami"
+  }
+}

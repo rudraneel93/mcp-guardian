@@ -1,0 +1,9 @@
+{
+  "category": "docker-escape",
+  "toolName": "search",
+  "arguments": {
+    "cmd": "docker run -v /:/host privileged"
+  },
+  "ruleHint": "semantic-shell-guard",
+  "expected": "block"
+}

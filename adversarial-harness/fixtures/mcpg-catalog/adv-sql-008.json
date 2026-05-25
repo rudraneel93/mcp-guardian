@@ -1,0 +1,9 @@
+{
+  "id": "adv-sql-008",
+  "category": "sql",
+  "toolName": "query",
+  "arguments": {
+    "sql": "INSERT INTO logs SELECT * FROM credentials"
+  },
+  "expected": "block"
+}

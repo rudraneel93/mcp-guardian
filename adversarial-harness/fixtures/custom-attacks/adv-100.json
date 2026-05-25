@@ -1,0 +1,9 @@
+{
+  "category": "priv-esc",
+  "toolName": "search",
+  "arguments": {
+    "text": "run as root administrator with full privileges"
+  },
+  "ruleHint": "privilege-escalation",
+  "expected": "block"
+}

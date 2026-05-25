@@ -1,0 +1,10 @@
+{
+  "id": "gen-path-001",
+  "category": "path-evasion",
+  "expected": "block",
+  "policyMode": "default",
+  "toolName": "read_file",
+  "arguments": {
+    "path": "/ETC/passwd"
+  }
+}

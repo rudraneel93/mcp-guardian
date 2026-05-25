@@ -1,0 +1,39 @@
+{
+  "id": "rbac-003",
+  "category": "rbac-evasion",
+  "expected": "pass",
+  "policyMode": "isolated",
+  "isolatedPolicy": {
+    "mode": "block",
+    "default_action": "pass",
+    "rules": [
+      {
+        "name": "rbac-isolated",
+        "action": "block",
+        "rbac": {
+          "scopes": [
+            "admin"
+          ],
+          "clientIds": [
+            "^client-harness-1$"
+          ],
+          "tenants": [
+            "default"
+          ]
+        }
+      }
+    ]
+  },
+  "context": {
+    "toolName": "admin_tool",
+    "arguments": {},
+    "agentIdentity": {
+      "sub": "harness-agent",
+      "scopes": [
+        "admin"
+      ],
+      "clientId": "client-harness-1"
+    },
+    "tenantId": "default"
+  }
+}

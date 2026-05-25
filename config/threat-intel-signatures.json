@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "description": "Known MCP ecosystem threat signatures — matched in tool arguments before allowlist pass.",
+  "patterns": [
+    "MCP TypeScript SDK has a ReDoS vulnerability",
+    "(?:Model Context Protocol \\(MCP\\)|MCP) TypeScript SDK does not enable DNS rebinding protection by default",
+    "Cross-Origin MCP Tool Invocation via Empty Default Secret",
+    "Network-AI: Unauthenticated Cross-Origin MCP"
+  ]
+}

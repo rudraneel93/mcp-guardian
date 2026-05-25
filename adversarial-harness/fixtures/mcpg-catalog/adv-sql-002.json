@@ -1,0 +1,9 @@
+{
+  "id": "adv-sql-002",
+  "category": "sql",
+  "toolName": "query",
+  "arguments": {
+    "sql": "admin' OR '1'='1"
+  },
+  "expected": "block"
+}

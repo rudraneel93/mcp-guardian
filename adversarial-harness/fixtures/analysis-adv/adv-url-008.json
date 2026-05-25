@@ -1,0 +1,21 @@
+{
+  "id": "adv-url-008",
+  "category": "adv-001-url-encoding",
+  "expected": "block",
+  "policyMode": "default",
+  "agentIdentity": {
+    "sub": "harness-agent",
+    "issuer": "harness",
+    "clientId": "client-harness-1",
+    "scopes": [
+      "read",
+      "write"
+    ]
+  },
+  "context": {
+    "toolName": "search",
+    "arguments": {
+      "query": "%65%76%61%6c%28%70%61%79%6c%6f%61%64%29"
+    }
+  }
+}

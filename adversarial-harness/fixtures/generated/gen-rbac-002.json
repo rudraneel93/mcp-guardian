@@ -1,0 +1,10 @@
+{
+  "id": "gen-rbac-002",
+  "category": "rbac-evasion",
+  "expected": "block",
+  "policyMode": "default",
+  "toolName": "bash",
+  "arguments": {
+    "command": "id"
+  }
+}

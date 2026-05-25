@@ -1,0 +1,9 @@
+{
+  "category": "stacked-evasion",
+  "toolName": "puppeteer_navigate",
+  "arguments": {
+    "url": "http://127.1:80/"
+  },
+  "ruleHint": "block-dangerous-urls",
+  "expected": "block"
+}

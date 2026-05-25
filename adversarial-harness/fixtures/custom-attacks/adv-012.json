@@ -1,0 +1,9 @@
+{
+  "category": "sql-evasion",
+  "toolName": "query",
+  "arguments": {
+    "sql": "admin' OR '1'='1"
+  },
+  "ruleHint": "semantic-sql-guard",
+  "expected": "block"
+}

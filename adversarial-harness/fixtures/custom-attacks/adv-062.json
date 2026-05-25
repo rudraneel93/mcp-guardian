@@ -1,0 +1,9 @@
+{
+  "category": "default-deny",
+  "toolName": "run_shell",
+  "arguments": {
+    "cmd": "id"
+  },
+  "ruleHint": "default",
+  "expected": "block"
+}

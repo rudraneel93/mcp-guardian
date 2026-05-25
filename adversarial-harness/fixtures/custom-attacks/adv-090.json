@@ -1,0 +1,9 @@
+{
+  "category": "language-gadget",
+  "toolName": "run",
+  "arguments": {
+    "code": "new ObjectInputStream(stream).readObject()"
+  },
+  "ruleHint": "semantic-language-gadget",
+  "expected": "block"
+}

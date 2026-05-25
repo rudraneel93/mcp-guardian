@@ -1,0 +1,9 @@
+{
+  "id": "adv-multi-003",
+  "category": "multi",
+  "toolName": "query",
+  "arguments": {
+    "sql": "SELECT * FROM users WHERE '1'='1'; DROP TABLE users"
+  },
+  "expected": "block"
+}

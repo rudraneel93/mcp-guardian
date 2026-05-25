@@ -1,0 +1,9 @@
+{
+  "category": "shell-evasion",
+  "toolName": "search",
+  "arguments": {
+    "text": "echo Y2F0IC9ldGMvcGFzc3dk | base64 -d | sh"
+  },
+  "ruleHint": "semantic-shell-guard",
+  "expected": "block"
+}

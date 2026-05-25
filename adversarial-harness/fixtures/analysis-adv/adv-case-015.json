@@ -1,0 +1,21 @@
+{
+  "id": "adv-case-015",
+  "category": "adv-002-case-variation",
+  "expected": "block",
+  "policyMode": "default",
+  "agentIdentity": {
+    "sub": "harness-agent",
+    "issuer": "harness",
+    "clientId": "client-harness-1",
+    "scopes": [
+      "read",
+      "write"
+    ]
+  },
+  "context": {
+    "toolName": "search",
+    "arguments": {
+      "sql": "BeNcHmArK(1000000,sha1(1))"
+    }
+  }
+}

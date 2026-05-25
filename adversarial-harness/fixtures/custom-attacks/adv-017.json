@@ -1,0 +1,9 @@
+{
+  "category": "shell-evasion",
+  "toolName": "search",
+  "arguments": {
+    "query": "$(cat /etc/passwd)"
+  },
+  "ruleHint": "semantic-shell-guard",
+  "expected": "block"
+}

@@ -1,0 +1,11 @@
+{
+  "id": "upload-regex-13",
+  "category": "upload-regex",
+  "toolName": "search",
+  "arguments": {
+    "url": "http://127.0.0.1/admin"
+  },
+  "ruleHint": "pattern-evasion",
+  "expected": "block",
+  "source": "uploaded-bypass"
+}

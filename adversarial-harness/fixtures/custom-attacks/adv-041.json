@@ -1,0 +1,9 @@
+{
+  "category": "path-evasion",
+  "toolName": "list_directory",
+  "arguments": {
+    "directory": "/var/run/secrets/kubernetes.io/"
+  },
+  "ruleHint": "block-sensitive-paths",
+  "expected": "block"
+}

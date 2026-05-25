@@ -1,0 +1,9 @@
+{
+  "category": "evasion-encoding",
+  "toolName": "search",
+  "arguments": {
+    "message": "fetch http://127.0.0.1%2fmetadata"
+  },
+  "ruleHint": "semantic-url-guard",
+  "expected": "block"
+}

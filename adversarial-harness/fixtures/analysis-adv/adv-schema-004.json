@@ -1,0 +1,21 @@
+{
+  "id": "adv-schema-004",
+  "category": "adv-008-null-byte-path",
+  "expected": "block",
+  "policyMode": "default",
+  "agentIdentity": {
+    "sub": "harness-agent",
+    "issuer": "harness",
+    "clientId": "client-harness-1",
+    "scopes": [
+      "read",
+      "write"
+    ]
+  },
+  "context": {
+    "toolName": "read_file",
+    "arguments": {
+      "path": "/etc/passwd\u0000.txt"
+    }
+  }
+}

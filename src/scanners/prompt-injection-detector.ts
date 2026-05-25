@@ -36,7 +36,8 @@ interface InjectionPattern {
   regex:       string;
 }
 
-const INJECTION_RULES: InjectionPattern[] = [
+/** Exported for adversarial harness parity (Python port). */
+export const INJECTION_RULES: InjectionPattern[] = [
   // ═══════════════════════════════════════════════════════════════
   // CATEGORY 1: Role / Persona Override — CRITICAL
   // ═══════════════════════════════════════════════════════════════
@@ -157,7 +158,7 @@ const INJECTION_RULES: InjectionPattern[] = [
   { id: 'hex-escape-injection', severity: 'medium', description: 'Hex-escaped injection string',
     regex: '(?:\\\\x[0-9a-fA-F]{2}){8,}' },
   { id: 'rot13-obfuscation', severity: 'medium', description: 'Likely ROT13/ROT-encoded instruction (gibberish word patterns)',
-    regex: '\\b(?:vtabjre|juvfg|guvf|gung|lbh|ner|gur|sbe|jvgu|sebz|unir|jvyy|qba\'?g|bhg|zlfg|cebwrpg|qvpr)\\b' },
+    regex: '\\b(?:vtaber|juvfg|guvf|gung|lbh|ner|gur|sbe|jvgu|sebz|unir|jvyy|qba\'?g|bhg|zlfg|cebwrpg|qvpr)\\b' },
 
   // ═══════════════════════════════════════════════════════════════
   // CATEGORY 11: Social Engineering — MEDIUM

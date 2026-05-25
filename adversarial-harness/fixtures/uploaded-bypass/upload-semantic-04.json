@@ -1,0 +1,11 @@
+{
+  "id": "upload-semantic-04",
+  "category": "upload-semantic",
+  "toolName": "search",
+  "arguments": {
+    "pickle": "cos\nsystem\n(S\"id\"\ntR."
+  },
+  "ruleHint": "semantic-guard",
+  "expected": "block",
+  "source": "uploaded-bypass"
+}

@@ -1,0 +1,9 @@
+{
+  "category": "xxe",
+  "toolName": "search",
+  "arguments": {
+    "xml": "<!DOCTYPE foo [<!ENTITY xxe SYSTEM \"file:///etc/passwd\">]>"
+  },
+  "ruleHint": "semantic-xxe-guard",
+  "expected": "block"
+}

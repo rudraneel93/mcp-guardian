@@ -1,0 +1,9 @@
+{
+  "category": "ssti",
+  "toolName": "search",
+  "arguments": {
+    "template": "{{7*7}}"
+  },
+  "ruleHint": "semantic-ssti-guard",
+  "expected": "block"
+}

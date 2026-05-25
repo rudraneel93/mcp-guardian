@@ -1,0 +1,10 @@
+{
+  "id": "gen-sql-001",
+  "category": "sql-evasion",
+  "expected": "block",
+  "policyMode": "default",
+  "toolName": "query",
+  "arguments": {
+    "sql": "SELECT SLEEP(5)"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "id": "adv-ssrf-001",
+  "category": "ssrf",
+  "toolName": "puppeteer_navigate",
+  "arguments": {
+    "url": "http://127.0.0.1/admin"
+  },
+  "expected": "block"
+}

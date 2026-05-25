@@ -1,0 +1,10 @@
+{
+  "id": "gen-sql-003",
+  "category": "sql-evasion",
+  "expected": "block",
+  "policyMode": "default",
+  "toolName": "query",
+  "arguments": {
+    "sql": "UNION SELECT password FROM users--"
+  }
+}

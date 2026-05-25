@@ -1,0 +1,9 @@
+{
+  "category": "sql-evasion",
+  "toolName": "query",
+  "arguments": {
+    "sql": "SELECT * FROM users WHERE name='x' OR 1=1"
+  },
+  "ruleHint": "semantic-sql-guard",
+  "expected": "block"
+}

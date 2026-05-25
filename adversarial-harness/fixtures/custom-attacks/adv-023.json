@@ -1,0 +1,9 @@
+{
+  "category": "ssrf-evasion",
+  "toolName": "search",
+  "arguments": {
+    "href": "http://0x7f000001/"
+  },
+  "ruleHint": "semantic-url-guard",
+  "expected": "block"
+}

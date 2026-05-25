@@ -1,0 +1,10 @@
+{
+  "id": "gen-benign-003",
+  "category": "benign-probe",
+  "expected": "pass",
+  "policyMode": "default",
+  "toolName": "list_directory",
+  "arguments": {
+    "path": "."
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "id": "gen-github-001",
+  "category": "github-deny",
+  "expected": "block",
+  "policyMode": "default",
+  "toolName": "merge_pull_request",
+  "arguments": {
+    "id": 1
+  }
+}

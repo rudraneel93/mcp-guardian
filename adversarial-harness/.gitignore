@@ -1,0 +1,4 @@
+reports/
+python/**/__pycache__/
+*.pyc
+.python-version

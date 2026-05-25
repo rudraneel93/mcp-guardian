@@ -1,0 +1,9 @@
+{
+  "id": "adv-path-009",
+  "category": "path",
+  "toolName": "read_file",
+  "arguments": {
+    "path": "/var/run/docker.sock"
+  },
+  "expected": "block"
+}

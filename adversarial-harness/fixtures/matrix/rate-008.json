@@ -1,0 +1,44 @@
+{
+  "id": "rate-008",
+  "category": "rate-limit-evasion",
+  "expected": "block",
+  "policyMode": "isolated",
+  "isolatedPolicy": {
+    "mode": "block",
+    "default_action": "pass",
+    "rules": [
+      {
+        "name": "allow-search",
+        "action": "block",
+        "tools": {
+          "allow": [
+            "search"
+          ]
+        }
+      },
+      {
+        "name": "rate-isolated",
+        "action": "block",
+        "maxCallsPerMinute": 3
+      }
+    ]
+  },
+  "rateLimitSequence": 8,
+  "context": {
+    "toolName": "search",
+    "arguments": {
+      "n": 8
+    },
+    "agentIdentity": {
+      "sub": "harness-agent",
+      "issuer": "harness",
+      "clientId": "client-harness-1",
+      "scopes": [
+        "read",
+        "write"
+      ]
+    },
+    "tenantId": "default"
+  },
+  "expectedRule": "rate-isolated"
+}

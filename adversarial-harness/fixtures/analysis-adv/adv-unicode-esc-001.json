@@ -1,0 +1,21 @@
+{
+  "id": "adv-unicode-esc-001",
+  "category": "adv-001-unicode-escape",
+  "expected": "block",
+  "policyMode": "default",
+  "agentIdentity": {
+    "sub": "harness-agent",
+    "issuer": "harness",
+    "clientId": "client-harness-1",
+    "scopes": [
+      "read",
+      "write"
+    ]
+  },
+  "context": {
+    "toolName": "search",
+    "arguments": {
+      "query": "\\u0062\\u0061\\u0073\\u0068 -c id"
+    }
+  }
+}

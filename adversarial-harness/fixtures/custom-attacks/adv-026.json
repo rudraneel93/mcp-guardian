@@ -1,0 +1,9 @@
+{
+  "category": "ssrf-evasion",
+  "toolName": "search",
+  "arguments": {
+    "link": "javascript:alert(1)"
+  },
+  "ruleHint": "block-dangerous-urls",
+  "expected": "block"
+}

@@ -1,0 +1,9 @@
+{
+  "id": "adv-sql-005",
+  "category": "sql",
+  "toolName": "query",
+  "arguments": {
+    "body": "{\"$where\": \"this.password == x\"}"
+  },
+  "expected": "block"
+}

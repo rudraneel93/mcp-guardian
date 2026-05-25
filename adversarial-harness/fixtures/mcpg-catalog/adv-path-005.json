@@ -1,0 +1,9 @@
+{
+  "id": "adv-path-005",
+  "category": "path",
+  "toolName": "list_directory",
+  "arguments": {
+    "directory": "/var/run/secrets/kubernetes.io/"
+  },
+  "expected": "block"
+}

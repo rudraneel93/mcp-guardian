@@ -1,0 +1,11 @@
+{
+  "id": "upload-regex-08",
+  "category": "upload-regex",
+  "toolName": "search",
+  "arguments": {
+    "sql": "' OR 1=1--"
+  },
+  "ruleHint": "pattern-evasion",
+  "expected": "block",
+  "source": "uploaded-bypass"
+}
