@@ -26,6 +26,8 @@ linux:
     - AppImage
     - deb
   artifactName: mcp-guardian-soc-${version}-linux-${arch}.${ext}
+  maintainer: MCP Guardian <ops@mcp-guardian.dev>
+  category: Utility
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true

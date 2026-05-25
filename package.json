@@ -27,6 +27,7 @@
     "type": "git",
     "url": "git+https://github.com/rudraneel93/mcp-guardian.git"
   },
+  "author": "MCP Guardian <ops@mcp-guardian.dev>",
   "bugs": "https://github.com/rudraneel93/mcp-guardian/issues",
   "homepage": "https://www.npmjs.com/package/@mcp-guardian/server",
   "mcpName": "io.github.rudraneel93/mcp-guardian",
@@ -118,6 +119,7 @@
     "desktop": "node dist/cli.js desktop",
     "desktop:build": "node scripts/build-desktop-app.mjs",
     "desktop:pack": "pnpm desktop:build && electron-builder --config desktop/electron-builder.yml",
+    "desktop:smoke": "node scripts/desktop-smoke-test.mjs",
     "live:test": "sh scripts/run-live-test-stack.sh",
     "dashboard:build": "npm run build --prefix deploy/dashboard-spa",
     "dashboard:serve": "node scripts/serve.mjs",
@@ -213,7 +215,8 @@
   "licenseDetails": "Community Scope: MIT (see COMMUNITY_SCOPE.md). Pro features: LICENSE-PRO.",
   "pnpm": {
     "onlyBuiltDependencies": [
-      "better-sqlite3"
+      "better-sqlite3",
+      "electron"
     ],
     "overrides": {
       "protobufjs": ">=8.0.2",

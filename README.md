@@ -121,21 +121,22 @@ This finds your MCP configs (Cline, Claude Desktop, Cursor, Windsurf), wraps the
 mcp-guardian proxy --policy default-policy.yaml
 ```
 
-### Open the SOC Dashboard
+### Open the SOC Dashboard (installable desktop app — recommended)
 
-**Terminal 1 — API backend:**
 ```bash
-pnpm soc:api:dev
+pnpm desktop:build
+mcp-guardian desktop
 ```
 
-**Terminal 2 — Dashboard:**
+Runs the full SOC UI as a **local desktop application** on `127.0.0.1` only — no browser tab, no `pnpm serve`, and no open firewall ports required. See [docs/ENTERPRISE_DESKTOP.md](docs/ENTERPRISE_DESKTOP.md) for enterprise installers (`pnpm desktop:pack`).
+
+### Developer web mode (optional, hot reload)
+
 ```bash
-pnpm dashboard:dev
+pnpm serve
 ```
 
-Then open **http://localhost:3000** in your browser.
-
-> The dashboard connects to the live backend automatically and shows real data from your actual traffic.
+Then open **http://localhost:3000** in your browser (Next.js dev — for contributors only).
 
 ---
 

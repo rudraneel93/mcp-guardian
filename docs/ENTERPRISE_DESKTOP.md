@@ -43,6 +43,13 @@ Requirements:
 
 - Node.js 18+
 - Build the UI first (`pnpm desktop:build` is run automatically by `desktop:pack`)
+- **pnpm:** Electron must run its postinstall script. This repo lists `electron` in `pnpm.onlyBuiltDependencies`. If `mcp-guardian desktop` says Electron failed to install, run: `pnpm rebuild electron`
+
+### Smoke test (no window)
+
+```bash
+pnpm desktop:smoke
+```
 
 ## Web dev mode (optional)
 
