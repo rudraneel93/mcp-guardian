@@ -1,10 +1,21 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from 'react';
 
 export type DashboardWindow = '1h' | '12h' | '24h' | '7d' | '30d' | '90d';
 
 const STORAGE_KEY = 'guardian-dashboard-window';
+const CHANGE_EVENT = 'guardian-dashboard-window-changed';
+const DEFAULT_WINDOW: DashboardWindow = '7d';
 
 const WINDOW_DAYS: Record<DashboardWindow, number> = {
   '1h': 1 / 24,
@@ -15,24 +26,61 @@ const WINDOW_DAYS: Record<DashboardWindow, number> = {
   '90d': 90,
 };
 
+const VALID_WINDOWS: readonly DashboardWindow[] = ['1h', '12h', '24h', '7d', '30d', '90d'];
+
 type ContextValue = {
   window: DashboardWindow;
   windowDays: number;
+  windowParam: string;
   setWindow: (w: DashboardWindow) => void;
 };
 
 const DashboardWindowContext = createContext<ContextValue | null>(null);
 
 function readStoredWindow(): DashboardWindow {
-  if (typeof window === 'undefined') return '7d';
-  const stored = localStorage.getItem(STORAGE_KEY);
-  const valid: DashboardWindow[] = ['1h', '12h', '24h', '7d', '30d', '90d'];
-  if (valid.includes(stored as DashboardWindow)) return stored as DashboardWindow;
-  return '7d';
+  if (typeof window === 'undefined') return DEFAULT_WINDOW;
+  const stored = window.localStorage?.getItem(STORAGE_KEY);
+  if (stored && VALID_WINDOWS.includes(stored as DashboardWindow)) {
+    return stored as DashboardWindow;
+  }
+  return DEFAULT_WINDOW;
+}
+
+/**
+ * Public helper for components outside the provider (e.g. `DashboardClient`
+ * which mounts above `DashboardWindowProvider`). Reads from localStorage and
+ * subscribes to the CHANGE_EVENT broadcast so refreshAll() always has the
+ * latest window selection.
+ */
+export function useCurrentWindowDays(): {
+  windowLabel: DashboardWindow;
+  windowDays: number;
+  windowParam: string;
+} {
+  const subscribe = useCallback((cb: () => void) => {
+    if (typeof window === 'undefined') return () => {};
+    const handler = () => cb();
+    window.addEventListener(CHANGE_EVENT, handler);
+    window.addEventListener('storage', handler);
+    return () => {
+      window.removeEventListener(CHANGE_EVENT, handler);
+      window.removeEventListener('storage', handler);
+    };
+  }, []);
+  const getSnapshot = useCallback(() => readStoredWindow(), []);
+  const getServerSnapshot = useCallback(() => DEFAULT_WINDOW, []);
+  const label = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  return {
+    windowLabel: label,
+    windowDays: WINDOW_DAYS[label],
+    // Send a label to the backend (e.g. "1h", "24h"). The backend's
+    // parseWindowDays now accepts both labels and fractional numbers.
+    windowParam: label,
+  };
 }
 
 export function DashboardWindowProvider({ children }: { children: ReactNode }) {
-  const [windowLabel, setWindowLabel] = useState<DashboardWindow>('7d');
+  const [windowLabel, setWindowLabel] = useState<DashboardWindow>(DEFAULT_WINDOW);
 
   useEffect(() => {
     setWindowLabel(readStoredWindow());
@@ -40,13 +88,21 @@ export function DashboardWindowProvider({ children }: { children: ReactNode }) {
 
   const setWindow = useCallback((w: DashboardWindow) => {
     setWindowLabel(w);
-    localStorage.setItem(STORAGE_KEY, w);
+    if (typeof window !== 'undefined') {
+      try {
+        window.localStorage.setItem(STORAGE_KEY, w);
+      } catch {
+        /* private mode / storage disabled */
+      }
+      window.dispatchEvent(new CustomEvent(CHANGE_EVENT, { detail: { window: w } }));
+    }
   }, []);
 
-  const value = useMemo(
+  const value = useMemo<ContextValue>(
     () => ({
       window: windowLabel,
       windowDays: WINDOW_DAYS[windowLabel],
+      windowParam: windowLabel,
       setWindow,
     }),
     [windowLabel, setWindow],
@@ -61,8 +117,9 @@ export function useDashboardWindow(): ContextValue {
   const ctx = useContext(DashboardWindowContext);
   if (!ctx) {
     return {
-      window: '7d',
-      windowDays: 7,
+      window: DEFAULT_WINDOW,
+      windowDays: WINDOW_DAYS[DEFAULT_WINDOW],
+      windowParam: DEFAULT_WINDOW,
       setWindow: () => {},
     };
   }
@@ -70,13 +127,13 @@ export function useDashboardWindow(): ContextValue {
 }
 
 export function DashboardWindowSelector() {
-  const { window, setWindow } = useDashboardWindow();
+  const { window: w, setWindow } = useDashboardWindow();
   return (
     <div className="dashboard-window-toolbar">
       <label>
         Time window
         <select
-          value={window}
+          value={w}
           onChange={(e) => setWindow(e.target.value as DashboardWindow)}
           aria-label="Dashboard time window"
         >

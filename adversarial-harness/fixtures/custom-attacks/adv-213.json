@@ -1,0 +1,12 @@
+{
+  "id": "adv-213",
+  "toolName": "read_file",
+  "arguments": {
+    "query": "../../../..\\x00/etc/passwd"
+  },
+  "expected": "block",
+  "category": "boundary-evasion",
+  "ruleHint": "unicode-escaped-null",
+  "expectedBlock": true,
+  "source": "threat-lab-proactive"
+}

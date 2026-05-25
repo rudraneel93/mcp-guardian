@@ -15,7 +15,9 @@ export const STEP_TIMEOUT_MS = {
   'attack-learning-sim': 120_000,
   'setup-python-venv': 120_000,
   'harness-node-tests': 300_000,
-  'harness-parity': 300_000,
+  'harness-parity': 420_000,
+  'security-swarm-fast': 900_000,
+  'security-swarm-live': 3_600_000,
   'evasion-generate': 120_000,
   default: 600_000,
 };

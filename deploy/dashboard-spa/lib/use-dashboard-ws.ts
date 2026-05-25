@@ -4,7 +4,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   fetchSwarmStatus,
   getTenantId,
+  resolveSseUrl,
   resolveWsUrl,
+  usesProxyWebSocket,
   type AggregateMetrics,
   type AuditEvent,
   type AuditResponse,
@@ -313,19 +315,28 @@ export function useDashboardWs(enabled: boolean, sessionKey: number): DashboardW
     [appendEntry, pushEntry, syncSwarmJobStatus],
   );
 
-  /** HTTP fallback: job.json updates even when WS swarm events miss */
+  /** HTTP fallback: job.json updates when WS swarm events miss (proxy mode only). */
   useEffect(() => {
     if (!enabled) return;
     let cancelled = false;
 
     const poll = async () => {
-      const st = await fetchSwarmStatus();
-      if (cancelled || !st) return;
-      syncSwarmJobStatus(st);
+      try {
+        const st = await fetchSwarmStatus();
+        if (cancelled || !st) return;
+        syncSwarmJobStatus(st);
+      } catch {
+        /* API offline */
+      }
     };
 
-    void poll();
-    const id = window.setInterval(() => void poll(), SWARM_POLL_MS);
+    const pollMs = usesProxyWebSocket() ? SWARM_POLL_MS : 2000;
+
+    void poll().catch(() => undefined);
+
+    const id = window.setInterval(() => {
+      void poll().catch(() => undefined);
+    }, pollMs);
     return () => {
       cancelled = true;
       window.clearInterval(id);
@@ -336,10 +347,141 @@ export function useDashboardWs(enabled: boolean, sessionKey: number): DashboardW
     lastSwarmPhaseRef.current = '';
   }, [sessionKey]);
 
+  /** SOC API live push via Server-Sent Events (same-origin `pnpm serve`). */
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || usesProxyWebSocket()) return;
+
+    const sseUrl = resolveSseUrl();
+    let es: EventSource | null = null;
+    let closed = false;
+
+    function applyStatus(text: string, isError: boolean) {
+      setStatusText(text);
+      setStatusIsError(isError);
+    }
+
+    function onMetrics(ev: MessageEvent) {
+      try {
+        const raw = JSON.parse(ev.data as string) as Record<string, unknown>;
+        const total = Number(raw.totalRequests ?? 0);
+        const blocked = Number(raw.blockedRequests ?? 0);
+        const passed = Number(raw.passedRequests ?? total - blocked);
+        const passRate =
+          raw.passRate !== undefined && raw.passRate !== null
+            ? Number(raw.passRate)
+            : total > 0
+              ? Math.round((passed / total) * 100)
+              : null;
+        setMetricsPatch({
+          available: true,
+          totalRequests: total,
+          blockedRequests: blocked,
+          passedRequests: passed,
+          totalCost: Number(raw.totalCost ?? 0),
+          avgLatencyMs: Number(raw.avgLatencyMs ?? 0),
+          passRate,
+          activeServers: Number(raw.activeServers ?? 0),
+          lastUpdated: String(raw.lastUpdated ?? new Date().toISOString()),
+          burnRatePerHour:
+            raw.burnRatePerHour !== undefined ? Number(raw.burnRatePerHour) : null,
+        });
+        setConnected(true);
+        applyStatus('Live stream connected (SOC API)', false);
+      } catch {
+        /* ignore malformed SSE payloads */
+      }
+    }
+
+    try {
+      es = new EventSource(sseUrl);
+      es.addEventListener('open', () => {
+        setConnected(true);
+        applyStatus('Live stream connected (SOC API)', false);
+      });
+      es.addEventListener('metrics:live', onMetrics);
+      es.addEventListener('swarm:progress', (ev: MessageEvent) => {
+        try {
+          const p = JSON.parse(ev.data as string) as Record<string, unknown>;
+          syncSwarmJobStatus({
+            jobId: String(p.jobId ?? ''),
+            state: 'running',
+            phase: String(p.phase ?? ''),
+            phaseLabel: String(p.phaseLabel ?? p.phase ?? ''),
+            progressPct: Number(p.progressPct ?? 0),
+            startedAt: null,
+            finishedAt: null,
+            exitCode: null,
+            error: null,
+            analysisPath: '',
+            logTail: '',
+          });
+        } catch { /* ignore */ }
+      });
+      es.addEventListener('swarm:done', (ev: MessageEvent) => {
+        try {
+          const p = JSON.parse(ev.data as string) as Record<string, unknown>;
+          syncSwarmJobStatus({
+            jobId: String(p.jobId ?? ''),
+            state: 'done',
+            phase: 'analysis',
+            phaseLabel: 'Complete',
+            progressPct: 100,
+            startedAt: null,
+            finishedAt: null,
+            exitCode: null,
+            error: null,
+            analysisPath: String(p.analysisPath ?? ''),
+            logTail: '',
+          });
+        } catch { /* ignore */ }
+      });
+      es.addEventListener('swarm:failed', (ev: MessageEvent) => {
+        try {
+          const p = JSON.parse(ev.data as string) as Record<string, unknown>;
+          syncSwarmJobStatus({
+            jobId: String(p.jobId ?? ''),
+            state: 'failed',
+            phase: 'analysis',
+            phaseLabel: 'Failed',
+            progressPct: 0,
+            startedAt: null,
+            finishedAt: null,
+            exitCode: null,
+            error: String(p.error ?? 'failed'),
+            analysisPath: '',
+            logTail: '',
+          });
+        } catch { /* ignore */ }
+      });
+      es.addEventListener('analysis:artifact', () => {
+        setSwarmDoneTick((t) => t + 1);
+      });
+      es.addEventListener('connected', () => {
+        pushEntry('system', 'SOC API stream connected', false);
+      });
+      es.onerror = () => {
+        if (closed) return;
+        setConnected(false);
+        applyStatus('Live stream disconnected — using REST polling', true);
+      };
+    } catch {
+      applyStatus('Live stream unavailable — using REST polling', true);
+    }
+
+    return () => {
+      closed = true;
+      es?.close();
+      es = null;
+    };
+  }, [enabled, sessionKey, pushEntry]);
+
+  useEffect(() => {
+    if (!enabled || !usesProxyWebSocket()) return;
 
     const wsUrl = resolveWsUrl();
+    if (!wsUrl) return;
+    const proxyWsUrl = wsUrl;
+
     let reconnectAttempt = 0;
     let reconnectTimer: number | null = null;
     let intentionalClose = false;
@@ -370,7 +512,7 @@ export function useDashboardWs(enabled: boolean, sessionKey: number): DashboardW
         return;
       }
       existing?.close();
-      const ws = new WebSocket(wsUrl);
+      const ws = new WebSocket(proxyWsUrl);
       wsRef.current = ws;
 
       ws.onopen = () => {

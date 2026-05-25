@@ -63,14 +63,33 @@ function banner(title, sub = '') {
 }
 
 function resolveVenvPython() {
-  if (existsSync(VENV_PY)) return VENV_PY;
+  if (existsSync(VENV_PY)) {
+    const check = runStep(VENV_PY, ['-c', 'import yaml'], {
+      cwd: REPO,
+      stepKey: 'venv-yaml-check',
+      live: false,
+      env: { PYTHONPATH: join(REPO, 'adversarial-harness', 'python') },
+    });
+    if (check.status === 0) return VENV_PY;
+  }
   const r = runStep('node', ['adversarial-harness/scripts/setup-python-venv.mjs'], {
     cwd: REPO,
     stepKey: 'setup-python-venv',
     live: false,
   });
   const out = (r.stdout || '').trim();
-  return out || 'python3';
+  const bin = out || 'python3';
+  const verify = runStep(bin, ['-c', 'import yaml'], {
+    cwd: REPO,
+    stepKey: 'resolve-venv-yaml-check',
+    live: false,
+    env: { PYTHONPATH: join(REPO, 'adversarial-harness', 'python') },
+  });
+  if (verify.status !== 0) {
+    console.error('[security-swarm] Python yaml module missing after setup-python-venv');
+    return 'python3';
+  }
+  return bin;
 }
 
 let consecutiveFailures = 0;
@@ -277,7 +296,10 @@ if (!FAST) {
   run('pnpm', ['exec', 'tsx', 'adversarial-harness/scripts/compare-node-python.ts'], {
     label: 'harness-parity',
     totalSteps,
+    timeoutMs: 420_000,
     env: {
+      SWARM_FAST: 'true',
+      SWARM_MODE: 'fast',
       GUARDIAN_DISABLE_SEMANTIC: 'true',
       PYTHONPATH: join(REPO, 'adversarial-harness', 'python'),
       HARNESS_PYTHON: venvPython,

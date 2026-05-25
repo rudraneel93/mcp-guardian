@@ -16,8 +16,9 @@ export function AgentFlowPanel({ ws, roles }: Props) {
     <section aria-label="Agent flow">
       <h2>Live agent flow</h2>
       <p className="hint">
-        Real-time MCP tool decisions, semantic audit, AI learning, and security analysis — via
-        WebSocket.
+        Real-time MCP tool decisions, semantic audit, AI learning, and security analysis — via live
+        API stream (SSE on <code>pnpm serve</code>, WebSocket when using <code>dashboard:proxy</code>
+        ).
       </p>
       <p className={ws.statusIsError ? 'status status-error' : 'status'}>{ws.statusText}</p>
 

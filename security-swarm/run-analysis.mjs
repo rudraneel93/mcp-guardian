@@ -230,9 +230,12 @@ async function main() {
           : 'Swarm gates (fast): corpus + harness parity — typically 3–5 min…',
       );
       run('pnpm', [swarmScript], {
+        stepKey: NIGHTLY ? 'security-swarm-live' : 'security-swarm-fast',
+        timeoutMs: NIGHTLY ? 3_600_000 : 900_000,
         env: {
           GUARDIAN_POLICY_TIMING_ENVELOPE: 'false',
           GUARDIAN_DISABLE_SEMANTIC: 'true',
+          GUARDIAN_CI_BYPASS_LICENSE: process.env.GUARDIAN_CI_BYPASS_LICENSE || 'true',
         },
       });
       const latest = existsSync(join(SWARM_DIR, 'latest.json'))

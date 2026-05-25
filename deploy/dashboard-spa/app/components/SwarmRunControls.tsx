@@ -43,16 +43,20 @@ export function SwarmRunControls({
   );
 
   const refreshStatus = useCallback(async () => {
-    const st = await fetchSwarmStatus();
-    if (st) {
-      setStatus(st);
-      onSwarmStatus?.(st);
+    try {
+      const st = await fetchSwarmStatus();
+      if (st) {
+        setStatus(st);
+        onSwarmStatus?.(st);
+      }
+      return st;
+    } catch {
+      return null;
     }
-    return st;
   }, [onSwarmStatus]);
 
   useEffect(() => {
-    void refreshStatus();
+    void refreshStatus().catch(() => undefined);
     return () => {
       if (pollRef.current) window.clearInterval(pollRef.current);
     };
@@ -165,14 +169,14 @@ export function SwarmRunControls({
       ) : null}
       {msg ? <p className="action-msg">{msg}</p> : null}
       {running && phaseLabel ? (
-        <p className="hint">
-          Running: {phaseLabel} ({progressPct}%)
+        <div className="swarm-run-progress">
+          <p className="hint">
+            Running: {phaseLabel} ({progressPct}%)
+          </p>
           {status?.logTail ? (
-            <>
-              <pre className="code-block log-tail">{status.logTail.slice(-600)}</pre>
-            </>
+            <pre className="code-block log-tail">{status.logTail.slice(-600)}</pre>
           ) : null}
-        </p>
+        </div>
       ) : null}
       {status?.state === 'failed' && status.error ? (
         <p className="status status-error" role="alert">

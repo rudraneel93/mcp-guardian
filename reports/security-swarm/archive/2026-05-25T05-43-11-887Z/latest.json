@@ -1,0 +1,160 @@
+{
+  "version": 1,
+  "mode": "fast",
+  "timestamp": "2026-05-25T05:39:11.988Z",
+  "commitSha": "9802aed15040d26ad9ddbde9f78674d3a6a8b2b1",
+  "findings": [
+    {
+      "severity": "info",
+      "source": "scout",
+      "summary": "Moderate advisories: 3"
+    }
+  ],
+  "timings": {
+    "totalSec": 285.7,
+    "steps": [
+      {
+        "label": "scout-audit",
+        "elapsedSec": 1.2
+      },
+      {
+        "label": "pnpm-build",
+        "elapsedSec": 5.7
+      },
+      {
+        "label": "vitest-policy-proxy-utils",
+        "elapsedSec": 114.6
+      },
+      {
+        "label": "corpus-eval",
+        "elapsedSec": 9.3
+      },
+      {
+        "label": "setup-python-venv",
+        "elapsedSec": 0.2
+      },
+      {
+        "label": "harness-node-tests",
+        "elapsedSec": 65.6
+      },
+      {
+        "label": "harness-parity",
+        "elapsedSec": 89.1
+      }
+    ]
+  },
+  "gates": {
+    "corpus": true,
+    "parity": true,
+    "steps": true,
+    "scout": true,
+    "bypassCount": 0,
+    "netNewBypassCount": 0,
+    "maxBypasses": 0,
+    "bypassBaseline": true
+  },
+  "bypasses": {
+    "detected": 0,
+    "baselineKnown": 0,
+    "netNew": 0,
+    "items": []
+  },
+  "overall": true,
+  "steps": [
+    {
+      "label": "scout-audit",
+      "ok": true,
+      "status": 0,
+      "timedOut": false,
+      "elapsedSec": 1.2,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "pnpm-build",
+      "ok": true,
+      "status": 0,
+      "timedOut": false,
+      "elapsedSec": 5.7,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "vitest-policy-proxy-utils",
+      "ok": true,
+      "status": 0,
+      "timedOut": false,
+      "elapsedSec": 114.6,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "corpus-eval",
+      "ok": true,
+      "status": 0,
+      "timedOut": false,
+      "elapsedSec": 9.3,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "setup-python-venv",
+      "ok": true,
+      "status": 0,
+      "timedOut": false,
+      "elapsedSec": 0.2,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "harness-node-tests",
+      "ok": true,
+      "status": 0,
+      "timedOut": false,
+      "elapsedSec": 65.6,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "harness-parity",
+      "ok": true,
+      "status": 0,
+      "timedOut": false,
+      "elapsedSec": 89.1,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "scout": {
+    "agent": "scout",
+    "timestamp": "2026-05-25T05:34:27.190Z",
+    "audit": {
+      "ok": true,
+      "status": 1,
+      "advisories": [],
+      "summary": {
+        "info": 0,
+        "low": 1,
+        "moderate": 3,
+        "high": 0,
+        "critical": 0
+      }
+    }
+  },
+  "corpus": {
+    "totalEntries": 300,
+    "fn": 0,
+    "fp": 0,
+    "attackBlockRate": 1,
+    "benignPassRate": 1
+  },
+  "parity": {
+    "agreement": 595,
+    "total": 595,
+    "agreementRate": 1,
+    "corpusMismatches": 0
+  },
+  "harness": null,
+  "evasionPromotions": 7,
+  "recommendedEnvProfile": "hybrid"
+}

@@ -77,11 +77,11 @@ function deployDir(): string | null {
   return null;
 }
 
-/** Next static export (`out/`) when built; else legacy static files in `dashboard-spa/`. */
-function dashboardSpaDir(deployRoot: string): string {
+/** Next static export (`out/`) — SOC dashboard only; no legacy index fallback. */
+function dashboardSpaDir(deployRoot: string): string | null {
   const outDir = join(deployRoot, 'dashboard-spa', 'out');
   if (existsSync(join(outDir, 'index.html'))) return outDir;
-  return join(deployRoot, 'dashboard-spa');
+  return null;
 }
 
 function isReactDashboardBuilt(deployRoot: string | null): boolean {
@@ -91,14 +91,20 @@ function isReactDashboardBuilt(deployRoot: string | null): boolean {
 
 function loadDashboardHtml(): string {
   const dir = deployDir();
-  const spaIndex = dir ? join(dashboardSpaDir(dir), 'index.html') : '';
   const useSpa = process.env['GUARDIAN_DASHBOARD_SPA'] !== 'false';
-  if (useSpa && spaIndex && existsSync(spaIndex)) {
-    return readFileSync(spaIndex, 'utf-8');
+  if (useSpa && dir) {
+    const spaDir = dashboardSpaDir(dir);
+    if (spaDir) {
+      return readFileSync(join(spaDir, 'index.html'), 'utf-8');
+    }
   }
-  const legacy = dir ? join(dir, 'dashboard.html') : '';
-  if (legacy && existsSync(legacy)) return readFileSync(legacy, 'utf-8');
-  return '<!DOCTYPE html><html><body><h1>MCP Guardian API</h1><p>See README for REST and WebSocket endpoints.</p></body></html>';
+  if (process.env['GUARDIAN_DASHBOARD_LEGACY'] === 'true' && dir) {
+    const legacySpa = join(dir, 'dashboard-spa', 'index.legacy.html');
+    if (existsSync(legacySpa)) return readFileSync(legacySpa, 'utf-8');
+    const legacy = join(dir, 'dashboard.html');
+    if (existsSync(legacy)) return readFileSync(legacy, 'utf-8');
+  }
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><title>MCP Guardian</title></head><body style="font-family:system-ui,sans-serif;max-width:40rem;margin:2rem auto;padding:0 1rem"><h1>SOC dashboard not built</h1><p>Run <code>pnpm serve</code> or <code>pnpm dashboard:build</code> from the repo root, then refresh.</p><p>Expected: <code>deploy/dashboard-spa/out/index.html</code></p></body></html>`;
 }
 
 const SPA_MIME: Record<string, string> = {
@@ -152,7 +158,7 @@ function tryServeDashboardSpa(
   const dir = deployDir();
   if (!dir) return false;
   const spaRoot = dashboardSpaDir(dir);
-  const legacyRoot = join(dir, 'dashboard-spa');
+  if (!spaRoot) return false;
 
   const method = res.req?.method || 'GET';
 
@@ -173,11 +179,7 @@ function tryServeDashboardSpa(
 
   if (!url.startsWith('/dashboard-spa/')) return false;
   const rel = url.replace(/^\/dashboard-spa\//, '');
-  if (serveDashboardAsset(spaRoot, rel, res, method)) return true;
-  if (spaRoot !== legacyRoot) {
-    return serveDashboardAsset(legacyRoot, rel, res, method);
-  }
-  return false;
+  return serveDashboardAsset(spaRoot, rel, res, method);
 }
 
 function tryServeSwarmArtifact(url: string, res: ServerResponse, method: string = 'GET'): boolean {
@@ -344,7 +346,7 @@ export async function startDashboardServer(
   const deployRoot = deployDir();
   if (dashboardEnabled && deployRoot && !isReactDashboardBuilt(deployRoot)) {
     Logger.warn(
-      '[dashboard] React dashboard not built — run pnpm dashboard:build (serving legacy static shell until out/ exists)',
+      '[dashboard] SOC dashboard not built — run pnpm serve or pnpm dashboard:build (deploy/dashboard-spa/out/)',
     );
   }
 
@@ -915,10 +917,13 @@ export async function startDashboardServer(
             yaml = '';
           }
         }
-        const mode = policyWatcher?.get()?.getMode() || 'audit';
+        const engine = policyWatcher?.get();
+        const mode = engine?.getMode() || 'audit';
+        const ruleCount = engine?.getRuleCount() ?? 0;
         writeJson(res, 200, {
           mode,
-          rules: yaml ? `${yaml.split('\n').length} lines` : 'No policy file',
+          ruleCount,
+          rules: ruleCount > 0 ? `${ruleCount} active rules` : yaml ? `${yaml.split('\n').length} lines` : 'No policy file',
           yaml,
           path: policyPath,
         });
@@ -1549,6 +1554,39 @@ export async function startDashboardServer(
         }
       }
 
+      if (url === '/api/ai/learning/cycle' && method === 'POST') {
+        setCors();
+        try {
+          const { isAiLearningEnabled } = await import('./ai-enabled.js');
+          if (!isAiLearningEnabled()) {
+            writeJson(res, 503, { error: 'AI learning disabled (GUARDIAN_AI_ENABLED=false)' });
+            return;
+          }
+          const { runLearningCycleForDb } = await import('../ai/suggestion-engine.js');
+          const result = await runLearningCycleForDb(runtimeHistoryDb);
+          if (!result) {
+            writeJson(res, 200, {
+              ok: false,
+              error: 'No history data or servers — route MCP traffic through Guardian first',
+            });
+            return;
+          }
+          writeJson(res, 200, {
+            ok: true,
+            suggestionCount: result.suggestions.length,
+            autoAppliedCount: result.autoApplied.length,
+            insightCount: result.insights.length,
+            report: result.report,
+          });
+          return;
+        } catch (err) {
+          writeJson(res, 500, {
+            error: err instanceof Error ? err.message : 'Learning cycle failed',
+          });
+          return;
+        }
+      }
+
       if (url === '/api/ai/rollback' && method === 'POST') {
         setCors();
         const { rollbackAiLearning } = await import('../ai/suggestion-engine.js');
@@ -1611,7 +1649,8 @@ export async function startDashboardServer(
           const actionFilter = q.get('action') || '';
           const serverFilter = q.get('server') || '';
           const region = parseRegionParam(q);
-          const fed = await resolveChartContext(requestTenantId, 90, region);
+          const windowDays = parseWindowDays(q.get('window') || '7');
+          const fed = await resolveChartContext(requestTenantId, windowDays, region);
           const db = fed.db;
           if (!db) {
             writeJson(res, 200, unavailable({
@@ -1620,8 +1659,8 @@ export async function startDashboardServer(
             return;
           }
 
-          const srvs = await getAllActiveServerNames(db, requestTenantId);
-          let records = await loadAllCallRecords(db, srvs, requestTenantId);
+          // Use the windowed loader so audit honors the dashboard window
+          let records = await loadAllRecordsInWindow(db, requestTenantId, windowDays);
           if (serverFilter) {
             records = records.filter((r) => r.serverName === serverFilter);
           }
@@ -2520,32 +2559,52 @@ export async function startDashboardServer(
         writeJson(res, 200, candidate);
         return;
       }
-      // ── Threat Discovery Scheduler endpoints (Enterprise 1A) ──
+      // ── Threat Discovery Scheduler (in-process, persists to ~/.mcp-guardian) ──
       if (url === '/api/threat-discovery/scheduler/start' && method === 'POST') {
         setCors();
-        writeJson(res, 200, { status: 'ok', message: 'Scheduler started — use node scripts/schedule-threat-discovery.mjs' });
+        try {
+          const { startScheduler } = await import('./threat-discovery-scheduler.js');
+          const state = startScheduler(requestTenantId);
+          writeJson(res, 200, { status: 'ok', ...state });
+        } catch (err) {
+          writeJson(res, 500, {
+            status: 'error',
+            error: err instanceof Error ? err.message : 'Failed to start scheduler',
+          });
+        }
         return;
       }
       if (url === '/api/threat-discovery/scheduler/stop' && method === 'POST') {
         setCors();
-        writeJson(res, 200, { status: 'ok', message: 'Scheduler stopped' });
+        try {
+          const { stopScheduler } = await import('./threat-discovery-scheduler.js');
+          const state = stopScheduler();
+          writeJson(res, 200, { status: 'ok', ...state });
+        } catch (err) {
+          writeJson(res, 500, {
+            status: 'error',
+            error: err instanceof Error ? err.message : 'Failed to stop scheduler',
+          });
+        }
         return;
       }
       if (url === '/api/threat-discovery/scheduler/status' && method === 'GET') {
         setCors();
-        const { existsSync, readFileSync } = await import('fs');
-        const { join } = await import('path');
-        const { homedir } = await import('os');
-        const statePath = join(homedir(), '.mcp-guardian', 'scheduler-state.json');
-        if (existsSync(statePath)) {
-          const state = JSON.parse(readFileSync(statePath, 'utf-8'));
-          writeJson(res, 200, state);
-        } else {
-          writeJson(res, 200, { running: false, lastRunAt: null, message: 'Scheduler not started — run node scripts/schedule-threat-discovery.mjs' });
+        try {
+          const { getSchedulerStatus } = await import('./threat-discovery-scheduler.js');
+          writeJson(res, 200, getSchedulerStatus(requestTenantId));
+        } catch (err) {
+          writeJson(res, 500, {
+            running: false,
+            error: err instanceof Error ? err.message : 'Failed to read scheduler status',
+          });
         }
         return;
       }
-      if (url === '/api/threat-discovery/promote/batch' && method === 'POST') {
+      if (
+        (url === '/api/threat-discovery/promote/stats' && method === 'GET')
+        || (url === '/api/threat-discovery/promote/batch' && method === 'POST')
+      ) {
         setCors();
         try {
           const { getPromotionStats } = await import('../ai/auto-corpus-promoter.js');

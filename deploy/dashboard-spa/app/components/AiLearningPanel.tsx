@@ -15,6 +15,7 @@ import {
   pollAiThreats,
   rejectSuggestion,
   rollbackAiLearning,
+  runAiLearningCycle,
   type AiSuggestion,
   type SemanticOutcome,
   type ThreatIntelStatus,
@@ -37,7 +38,9 @@ type Props = {
 
 export function AiLearningPanel({ roles, refreshTick = 0, onAction, onOpenThreatLab }: Props) {
   const canAi = hasPermission(roles, 'ai');
+  const canOperate = hasPermission(roles, 'policy_test');
   const canMutate = hasPermission(roles, 'policy_mutate');
+  const [learningBusy, setLearningBusy] = useState(false);
   const [suggestions, setSuggestions] = useState<AiSuggestion[]>([]);
   const [semantic, setSemantic] = useState<SemanticOutcome[]>([]);
   const [semanticHint, setSemanticHint] = useState<string | null>(null);
@@ -134,9 +137,30 @@ export function AiLearningPanel({ roles, refreshTick = 0, onAction, onOpenThreat
     return Number.isNaN(d.getTime()) ? iso : d.toLocaleString();
   };
 
+  const onRunLearningCycle = async () => {
+    if (!canOperate) {
+      onAction?.('Requires operator role');
+      return;
+    }
+    setLearningBusy(true);
+    try {
+      const res = await runAiLearningCycle();
+      if (res.ok) {
+        onAction?.(
+          `Learning cycle complete — ${res.suggestionCount ?? 0} suggestions, ${res.autoAppliedCount ?? 0} auto-applied`,
+        );
+        await refresh();
+      } else {
+        onAction?.(res.error || 'Learning cycle failed');
+      }
+    } finally {
+      setLearningBusy(false);
+    }
+  };
+
   const onPollThreats = async () => {
-    if (!canAi) {
-      onAction?.('Requires admin/ai role');
+    if (!canOperate) {
+      onAction?.('Requires operator role');
       return;
     }
     setThreatPollBusy(true);
@@ -184,6 +208,16 @@ export function AiLearningPanel({ roles, refreshTick = 0, onAction, onOpenThreat
         <button type="button" className="secondary" onClick={() => void refresh()}>
           Refresh
         </button>
+        {canOperate ? (
+          <button
+            type="button"
+            className="primary"
+            disabled={learningBusy}
+            onClick={() => void onRunLearningCycle()}
+          >
+            {learningBusy ? 'Running cycle…' : 'Run learning cycle'}
+          </button>
+        ) : null}
         {canAi ? (
           <button type="button" className="secondary" onClick={() => void onRollback()}>
             Rollback AI snapshots
@@ -213,7 +247,7 @@ export function AiLearningPanel({ roles, refreshTick = 0, onAction, onOpenThreat
       )}
 
       <div className="btn-row">
-        {canAi ? (
+        {canOperate ? (
           <button
             type="button"
             className="secondary"
@@ -222,6 +256,9 @@ export function AiLearningPanel({ roles, refreshTick = 0, onAction, onOpenThreat
           >
             {threatPollBusy ? 'Polling feeds…' : 'Poll threat feeds now'}
           </button>
+        ) : null}
+        {threats?.pollingDisabled ? (
+          <span className="hint">Live threat polling disabled (GUARDIAN_AI_DISABLE_THREAT_POLL).</span>
         ) : null}
       </div>
 

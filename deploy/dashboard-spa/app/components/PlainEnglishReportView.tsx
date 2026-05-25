@@ -17,8 +17,11 @@ export function PlainEnglishReportView({ report }: { report: PlainEnglishReport 
         </header>
       ) : null}
 
-      {sections.map((section) => (
-        <ReportSection key={section.id} section={section} />
+      {sections.map((section, index) => (
+        <ReportSection
+          key={section.id ?? `section-${index}-${section.title}`}
+          section={section}
+        />
       ))}
 
       {report.generatedAt ? (

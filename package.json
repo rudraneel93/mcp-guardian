@@ -1,6 +1,6 @@
 {
   "name": "@mcp-guardian/server",
-  "version": "3.2.5",
+  "version": "3.2.7",
   "description": "Security, cost, and health governance proxy for MCP infrastructure — three-layer detection engine (regex + schema + LLM), monorepo, corpus, CI/CD",
   "type": "module",
   "files": [
@@ -8,6 +8,8 @@
     "assets",
     "deploy/dashboard.html",
     "deploy/dashboard-spa",
+    "desktop",
+    "docs/ENTERPRISE_DESKTOP.md",
     "policy-templates",
     "README.md",
     "LICENSE",
@@ -25,6 +27,7 @@
     "type": "git",
     "url": "git+https://github.com/rudraneel93/mcp-guardian.git"
   },
+  "author": "MCP Guardian <ops@mcp-guardian.dev>",
   "bugs": "https://github.com/rudraneel93/mcp-guardian/issues",
   "homepage": "https://www.npmjs.com/package/@mcp-guardian/server",
   "mcpName": "io.github.rudraneel93/mcp-guardian",
@@ -112,10 +115,20 @@
     "real-life:swarm": "node security-swarm/run-analysis.mjs",
     "real-life:continuous": "node scenarios/real-life/run-continuous-live-attack.mjs",
     "verify:corpus": "bash scripts/verify-corpus-parity.sh",
+    "serve": "node scripts/serve.mjs",
+    "desktop": "node dist/cli.js desktop",
+    "desktop:build": "node scripts/build-desktop-app.mjs",
+    "desktop:pack": "pnpm desktop:build && electron-builder --config desktop/electron-builder.yml",
+    "desktop:smoke": "node scripts/desktop-smoke-test.mjs",
+    "live:test": "sh scripts/run-live-test-stack.sh",
     "dashboard:build": "npm run build --prefix deploy/dashboard-spa",
-    "dashboard:serve": "node scripts/serve-dashboard.mjs",
+    "dashboard:serve": "node scripts/serve.mjs",
     "dashboard:proxy": "sh scripts/start-dashboard-proxy.sh",
-    "dashboard:dev": "npm run dev --prefix deploy/dashboard-spa",
+    "dashboard:dev": "PORT=3000 HOSTNAME=0.0.0.0 npm run dev --prefix deploy/dashboard-spa",
+    "soc:api": "tsx src/soc-api-server.ts",
+    "soc:api:dev": "SOC_API_PORT=4040 tsx watch src/soc-api-server.ts",
+    "soc:full": "concurrently --kill-others \"pnpm soc:api:dev\" \"pnpm dashboard:dev\"",
+    "soc:serve": "node scripts/serve.mjs",
     "cloud:dev": "pnpm --filter @mcp-guardian/cloud dev",
     "cloud:build": "pnpm --filter @mcp-guardian/cloud build",
     "cloud:test": "pnpm --filter @mcp-guardian/cloud test",
@@ -182,12 +195,16 @@
   "devDependencies": {
     "@modelcontextprotocol/server-filesystem": "^2026.1.14",
     "@types/better-sqlite3": "^7.6.13",
+    "@types/express": "^5.0.6",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.0.0",
     "@types/pg": "^8.20.0",
     "@types/shell-quote": "^1.7.5",
     "@types/ws": "^8.18.1",
     "@vitest/coverage-v8": "^3.2.4",
+    "concurrently": "^9.1.2",
+    "electron": "^35.1.0",
+    "electron-builder": "^25.1.8",
     "tsx": "^4.7.0",
     "turbo": "^2.9.12",
     "typescript": "^5.4.0",
@@ -198,7 +215,8 @@
   "licenseDetails": "Community Scope: MIT (see COMMUNITY_SCOPE.md). Pro features: LICENSE-PRO.",
   "pnpm": {
     "onlyBuiltDependencies": [
-      "better-sqlite3"
+      "better-sqlite3",
+      "electron"
     ],
     "overrides": {
       "protobufjs": ">=8.0.2",

@@ -1,0 +1,131 @@
+{
+  "timestamp": "2026-05-24T18:03:38.308079+00:00",
+  "policySource": "/Users/rudraneeldas/Desktop/mcp-guardian/default-policy.yaml",
+  "fixtureCounts": {
+    "corpusAttacks": 223,
+    "corpusBenign": 55,
+    "matrix": 89,
+    "custom": 219,
+    "generated": 38,
+    "uploadedBypass": 83,
+    "analysisAdv": 101
+  },
+  "policyEngine": {
+    "total": 808,
+    "passed": 808,
+    "failed": 0,
+    "passRatePercent": 100.0,
+    "elapsedSeconds": 93.236,
+    "corpus": {
+      "attacksOnDisk": 223,
+      "benignOnDisk": 55,
+      "tp": 221,
+      "fp": 0,
+      "tn": 57,
+      "fn": 0,
+      "recall": 1.0,
+      "benignPassRate": 1.0
+    },
+    "failures": [],
+    "byCategoryFailed": []
+  },
+  "infrastructure": {
+    "asyncQueuePython": {
+      "passed": true,
+      "taskCount": 100,
+      "maxConcurrent": 1,
+      "fifoVerified": true,
+      "elapsedMs": 117.48,
+      "avgMsPerTask": 1.1748
+    },
+    "streamingPython": {
+      "passed": true,
+      "chunkSize": 65536,
+      "overlap": 512,
+      "boundarySplit": true,
+      "note": "Full DLP chunk scan runs in Node vitest streaming-race.test.mjs"
+    },
+    "secretScannerPython": {
+      "passed": true,
+      "samples": {
+        "aws-key": {
+          "hits": [
+            "aws-access-key",
+            "aws-access-token"
+          ],
+          "detected": true
+        },
+        "github-pat": {
+          "hits": [
+            "github-pat-classic",
+            "github_token"
+          ],
+          "detected": true
+        },
+        "jwt-upload": {
+          "hits": [],
+          "detected": false
+        },
+        "jwt-full": {
+          "hits": [
+            "jwt-bearer-token",
+            "jwt"
+          ],
+          "detected": true
+        },
+        "pem": {
+          "hits": [
+            "generic-private-key",
+            "rsa_private"
+          ],
+          "detected": true
+        },
+        "stripe": {
+          "hits": [
+            "stripe-secret-key"
+          ],
+          "detected": true
+        },
+        "db-url": {
+          "hits": [
+            "postgres-url",
+            "db-url-generic",
+            "uri-credentials"
+          ],
+          "detected": true
+        },
+        "placeholder": {
+          "hits": [],
+          "detected": false
+        }
+      },
+      "detectedCount": 5,
+      "ruleCount": 268,
+      "jwtUploadDetected": false
+    },
+    "nodeVitest": {
+      "ok": true,
+      "exitCode": 0,
+      "elapsedSeconds": 40.8,
+      "numPassedTests": 26,
+      "numFailedTests": 0,
+      "numTotalTests": 26,
+      "components": {
+        "asyncSerialQueue": "adversarial-harness/node/async-queue.test.mjs",
+        "streamingRace": "adversarial-harness/node/streaming-race.test.mjs",
+        "secretScanner": "adversarial-harness/node/secret-scanner.test.mjs",
+        "mockMcpProxy": "adversarial-harness/node/proxy-pipeline.test.mjs + mock-mcp-server.mjs",
+        "concurrencyLatency": "adversarial-harness/node/concurrency-latency.test.mjs"
+      }
+    }
+  },
+  "enterpriseCsv": {
+    "path": "/Users/rudraneeldas/Desktop/mcp-guardian/adversarial-harness/reports/enterprise_results.csv",
+    "total": 808,
+    "passed": 808,
+    "passRatePercent": 100.0,
+    "note": "Uses production default-policy.yaml PolicyEngine; uploaded 56% results used scanner-only harness, not this stack."
+  },
+  "allPassed": true,
+  "conclusion": "Production policy stack meets comprehensive adversarial bar: 808/808 fixture decisions correct; infrastructure simulations pass."
+}

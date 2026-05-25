@@ -126,7 +126,9 @@ export function ThreatDiscoveryPanel({
         <AutoResearchMonitor entries={autoEntries} status={status} />
       ) : null}
 
-      {subTab === 'automation' ? <ThreatDiscoveryAutomation /> : null}
+      {subTab === 'automation' ? (
+        <ThreatDiscoveryAutomation roles={roles} onAction={onAction} />
+      ) : null}
       {subTab === 'architecture' ? <ThreatArchitectureView /> : null}
     </section>
   );

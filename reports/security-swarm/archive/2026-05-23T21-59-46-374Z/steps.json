@@ -1,0 +1,69 @@
+{
+  "steps": [
+    {
+      "label": "scout-audit",
+      "ok": true,
+      "status": 0,
+      "timedOut": false,
+      "elapsedSec": 1.7,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "pnpm-build",
+      "ok": true,
+      "status": 0,
+      "timedOut": false,
+      "elapsedSec": 3,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "vitest-policy-proxy-utils",
+      "ok": false,
+      "status": 1,
+      "timedOut": false,
+      "elapsedSec": 94.4,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "corpus-eval",
+      "ok": false,
+      "status": 1,
+      "timedOut": false,
+      "elapsedSec": 0.6,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "setup-python-venv",
+      "ok": true,
+      "status": 0,
+      "timedOut": false,
+      "elapsedSec": 0.5,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "harness-node-tests",
+      "ok": true,
+      "status": 0,
+      "timedOut": false,
+      "elapsedSec": 45.5,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "harness-parity",
+      "ok": false,
+      "status": 1,
+      "timedOut": false,
+      "elapsedSec": 0.2,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "mode": "fast",
+  "live": true
+}

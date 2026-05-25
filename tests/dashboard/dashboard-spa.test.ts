@@ -38,6 +38,19 @@ describe('dashboard-spa', () => {
     expect(apiSrc).toMatch(/base \? `\$\{base\}\$\{normalized\}` : normalized/);
   });
 
+  it('includes SOC quick actions and learning cycle API client', () => {
+    const soc = join(SPA_ROOT, 'app', 'components', 'dashboard', 'SocQuickActions.tsx');
+    const api = join(SPA_ROOT, 'lib', 'guardian-api.ts');
+    expect(existsSync(soc)).toBe(true);
+    const apiSrc = readFileSync(api, 'utf-8');
+    expect(apiSrc).toContain('runAiLearningCycle');
+    expect(apiSrc).toContain('/api/ai/learning/cycle');
+    expect(apiSrc).toContain('fetchPromotionStats');
+    const client = readFileSync(join(SPA_ROOT, 'app', 'components', 'DashboardClient.tsx'), 'utf-8');
+    expect(client).toContain('SocQuickActions');
+    expect(client).toContain("'SOC / AI'");
+  });
+
   it('includes Enterprise AI panel for Tier 1/2 features', () => {
     const enterprise = join(SPA_ROOT, 'app', 'components', 'EnterpriseAiPanel.tsx');
     const lora = join(SPA_ROOT, 'app', 'components', 'TenantLoraPanel.tsx');
@@ -48,11 +61,19 @@ describe('dashboard-spa', () => {
     expect(client).toContain('EnterpriseAiPanel');
   });
 
-  it('keeps legacy static fallback when Next export is not built', () => {
-    const legacyIndex = join(SPA_ROOT, 'index.html');
+  it('keeps legacy static assets for opt-in GUARDIAN_DASHBOARD_LEGACY only', () => {
+    const legacyIndex = join(SPA_ROOT, 'index.legacy.html');
     const legacyJs = join(SPA_ROOT, 'app.js');
     expect(existsSync(legacyIndex)).toBe(true);
     expect(existsSync(legacyJs)).toBe(true);
+    expect(existsSync(join(SPA_ROOT, 'package.json'))).toBe(true);
+  });
+
+  it('documents pnpm serve for SOC static export', () => {
+    const pkg = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf-8')) as {
+      scripts?: Record<string, string>;
+    };
+    expect(pkg.scripts?.serve).toContain('scripts/serve.mjs');
   });
 
   it('static export exists after dashboard:build', () => {

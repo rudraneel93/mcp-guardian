@@ -137,7 +137,24 @@ export function permissionForRoute(method: string, url: string): DashboardRouteP
   }
   if (path === '/api/audit' || path.startsWith('/api/audit?')) return m === 'GET' ? 'read' : null;
   if (path.startsWith('/api/admin/')) return m === 'GET' ? 'admin' : 'admin';
+  if (path === '/api/ai/threats/poll' && m === 'POST') return 'policy_test';
+  if (path === '/api/ai/learning/cycle' && m === 'POST') return 'policy_test';
+  if (path === '/api/ai/rollback' && m === 'POST') return 'ai';
+  if (
+    path === '/api/ai/suggestions' ||
+    path === '/api/ai/report' ||
+    path === '/api/ai/state' ||
+    path === '/api/ai/baselines' ||
+    path === '/api/ai/threats'
+  ) {
+    return m === 'GET' ? 'read' : null;
+  }
   if (path.startsWith('/api/ai/')) return m === 'GET' ? 'ai' : 'ai';
+  if (path === '/api/threat-discovery/promote/stats' && m === 'GET') return 'read';
+  if (path.startsWith('/api/threat-discovery/')) {
+    if (m === 'POST' && (path.endsWith('/run') || path.includes('/scheduler/'))) return 'policy_test';
+    return m === 'GET' ? 'read' : null;
+  }
   if (path === '/api/logout') return 'read';
   return null;
 }

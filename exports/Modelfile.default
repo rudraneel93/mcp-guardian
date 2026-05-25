@@ -1,0 +1,16 @@
+FROM qwen3:8b
+PARAMETER temperature 0.05
+PARAMETER top_p 0.9
+SYSTEM You are an MCP security classifier for tenant default. Respond with exactly true_positive or false_positive.
+MESSAGE user
+server=s tool=run args=Local heuristic risk 0.75 (ignore-instructions, jailbreak) fp=7302693568e69003
+MESSAGE assistant
+true_positive
+MESSAGE user
+server=s tool=run args=Local heuristic risk 0.75 (ignore-instructions, jailbreak) fp=7302693568e69003
+MESSAGE assistant
+true_positive
+MESSAGE user
+server=s tool=run args=Local heuristic risk 0.75 (ignore-instructions, jailbreak) fp=7302693568e69003
+MESSAGE assistant
+true_positive

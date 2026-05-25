@@ -1,0 +1,163 @@
+========================================================================
+MCP GUARDIAN — SECURITY SWARM DETAILED ANALYSIS
+========================================================================
+
+Generated:     2026-05-25T05:51:21.088Z
+Pipeline start:  2026-05-25T05:47:26.891Z
+Pipeline end:    2026-05-25T05:51:21.084Z
+Commit:          42c3cb0c00d09513e682e531ca07cdbdb98697d2
+Overall:         PASS (live=PASS swarm=PASS)
+Profile:         hybrid
+
+LIVE MCP — OFFICIAL FILESYSTEM (Track B)
+------------------------------------------------------------------------
+  Upstream:     @modelcontextprotocol/server-filesystem
+  Sandbox:      /tmp/mcp-guardian-real-life-bQrQgR
+  Profile:      hybrid
+  Timestamp:    2026-05-25T05:13:14.559Z
+  Scenarios:    6/6 passed
+  Burst runs:   6
+
+  Tools discovered:
+    - read_file
+    - read_text_file
+    - read_media_file
+    - read_multiple_files
+    - write_file
+    - edit_file
+    - create_directory
+    - list_directory
+    - list_directory_with_sizes
+    - directory_tree
+    - move_file
+    - search_files
+    - get_file_info
+    - list_allowed_directories
+
+  Per-scenario results:
+  Scenario              Tool              Exp     Act     OK    Rule
+  ----------------------------------------------------------------------
+  benign-read           read_text_file    pass    pass    yes   —
+      latency: 258 ms
+  path-traversal        read_text_file    block   block   yes   semantic-path-guard
+      error: Blocked by MCP Guardian policy: Sensitive path blocked: /etc/passwd
+      latency: 51 ms
+  prompt-injection      read_text_file    block   block   yes   request-prompt-injection
+      error: Blocked by MCP Guardian policy: Prompt injection in tool arguments: …
+      latency: 50 ms
+  benign-list           list_directory    pass    pass    yes   —
+      latency: 101 ms
+  shell-in-args         write_file        block   block   yes   multimodal-injection
+      error: Blocked by MCP Guardian policy: Data exfiltration via URL injection
+      latency: 51 ms
+  denied-write          write_file        block   block   yes   multimodal-injection
+      error: Blocked by MCP Guardian policy: Literal exfiltration reference
+      latency: 51 ms
+
+  Learning burst: 6 repeat blocks (instant learning signal)
+
+CONTINUOUS LIVE ATTACK STREAM (Live MCP traffic)
+------------------------------------------------------------------------
+  Note: sca/ and enterprise-attack-sim/ are synthetic — not used here.
+
+  (skipped — no continuous-live-attack-session.json)
+
+AI LEARNING
+------------------------------------------------------------------------
+  Pending suggestions (review in TUI/dashboard before apply):
+    - [threat] threat-pkg-osv-GHSA-345p-7cg4-v4c7 conf=0.4 — Affected package @modelcontextprotocol/sdk: @model…
+    - [threat] threat-pkg-osv-GHSA-8r9q-7v3j-jr4g conf=0.4 — Affected package @modelcontextprotocol/sdk: Anthro…
+    - [threat] threat-pkg-osv-GHSA-w48q-cv73-mx4w conf=0.4 — Affected package @modelcontextprotocol/sdk: Model …
+
+  Top rule×tool block counts (attack-learning state):
+    - request-prompt-injection:search: 5 blocks
+
+  Semantic calibration (7d window):
+    records: 0  flagged: 0  labeled: 0
+    TP: 0  FP: 0
+    recommended profile: sync-only
+    GUARDIAN_SEMANTIC_MIN_CONFIDENCE: 0.6 → 0.6
+
+REGRESSION GATES — SECURITY SWARM (Track A)
+------------------------------------------------------------------------
+  Overall:        PASS
+  Mode:           fast
+  Commit:         42c3cb0c00d09513e682e531ca07cdbdb98697d2
+  Corpus:         PASS
+  Parity:         PASS
+  Steps:          PASS
+  Scout:          PASS
+  Bypasses:       0 detected, 0 net-new (max 0)
+
+  Corpus:
+    entries: 300  fn: 0  fp: 0
+    attack block rate: 100.0%
+    benign pass rate:  100.0%
+
+  Parity:
+    agreement: 300/300
+    rate: 100.0%
+
+  Step timings:
+    scout-audit                            1s
+    pnpm-build                           5.6s
+    vitest-policy-proxy-utils            108s
+    corpus-eval                          3.1s
+    setup-python-venv                    0.3s
+    harness-node-tests                  64.2s
+    harness-parity                      46.1s
+    TOTAL                              228.3s
+
+FINDINGS
+------------------------------------------------------------------------
+  [info] scout: Moderate advisories: 3
+
+ATTACK-LEARNING REFERENCE (simulated eval)
+------------------------------------------------------------------------
+  Generated: 2026-05-22T18:52:36.094Z
+  Run type:  short
+
+  Instant vs batch-only (median time to suggestion):
+    Instant:    252.5s  (avg blocks: 3)
+    Batch-only: 2988.7s  (avg blocks: 48)
+
+ARTIFACTS INDEX
+------------------------------------------------------------------------
+  analysis.txt     /workspace/reports/security-swarm/analysis.txt
+  swarm-report.txt /workspace/reports/security-swarm/swarm-report.txt
+  summary.md       /workspace/reports/security-swarm/summary.md
+  latest.json      /workspace/reports/security-swarm/latest.json
+  live session     /workspace/scenarios/real-life/output/live-filesystem-session.json
+  continuous live  (missing)
+  continuous bypasses (missing)
+  calibration.json /workspace/reports/security-swarm/calibration.json
+  job.log          /workspace/reports/security-swarm/job.log
+  figures (20): /workspace/reports/security-swarm/figures/
+    - fig1-gates-dashboard.png
+    - fig2-corpus-rates.png
+    - fig3-category-recall.png
+    - fig4-step-timings.png
+    - fig5-learning-comparison.png
+    - fig6-semantic-calibration.png
+    - fig7-live-filesystem-results.png
+    - learning-blocks-per-minute.png
+    - learning-class-confidence.png
+    - learning-rule-tool-heatmap.png
+    - learning-suggestion-rate.png
+    - pipeline-phase-waterfall.png
+    - semantic-confidence-hist.png
+    - semantic-labels-pie.png
+    - traffic-block-rules.png
+    - traffic-calls-over-time.png
+    - traffic-cost-by-server.png
+    - traffic-latency-percentiles.png
+    - traffic-top-tools.png
+    - user-servers-probe-status.png
+
+RECOMMENDATIONS
+------------------------------------------------------------------------
+  - Enable hybrid semantic + label outcomes via POST /api/learning/label, then re-run calibrate.
+
+========================================================================
+End of report — open reports/security-swarm/analysis.txt in your editor.
+========================================================================

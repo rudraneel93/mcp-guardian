@@ -210,6 +210,7 @@ export type AiSuggestion = {
 export type PolicyInfo = {
   mode: string;
   rules: string;
+  ruleCount?: number;
   yaml?: string;
   path?: string;
 };
@@ -246,7 +247,7 @@ export type PlainEnglishReport = {
   headline?: string;
   generatedAt?: string;
   sections?: Array<{
-    id: string;
+    id?: string;
     title: string;
     markdown?: string;
     bullets?: string[];
@@ -429,14 +430,56 @@ export type WsDashboardMessage = {
   action?: string;
 };
 
+/** Reject empty, literal "null"/"undefined", and non-http(s) bases (prevents `null` host navigation). */
+function normalizeApiBase(raw: string | null | undefined): string {
+  if (raw == null) return '';
+  const trimmed = raw.trim();
+  if (!trimmed || trimmed === 'null' || trimmed === 'undefined') return '';
+  if (/^https?:\/\//i.test(trimmed)) {
+    try {
+      const u = new URL(trimmed);
+      if (!u.hostname || u.hostname === 'null') return '';
+      return `${u.origin}${u.pathname}`.replace(/\/$/, '') || u.origin;
+    } catch {
+      return '';
+    }
+  }
+  return '';
+}
+
 /** API origin: query/env override, else same-origin relative paths (`/api/...`). */
 export function resolveApiBase(): string {
   if (typeof window === 'undefined') return '';
   const fromQuery = new URLSearchParams(window.location.search).get('apiBase');
-  if (fromQuery) return fromQuery.replace(/\/$/, '');
-  const envBase = process.env.NEXT_PUBLIC_GUARDIAN_API;
-  if (envBase) return envBase.replace(/\/$/, '');
+  const queryBase = normalizeApiBase(fromQuery);
+  if (queryBase) return queryBase;
+  const envBase = normalizeApiBase(process.env.NEXT_PUBLIC_GUARDIAN_API);
+  if (envBase) return envBase;
   return '';
+}
+
+/** True when the UI should use the proxy WebSocket on a different host (e.g. :4000). */
+export function usesProxyWebSocket(): boolean {
+  const base = resolveApiBase();
+  if (!base || typeof window === 'undefined') return false;
+  try {
+    return new URL(base).origin !== window.location.origin;
+  } catch {
+    return true;
+  }
+}
+
+/** Same-origin SSE stream from soc-api-server (`GET /api/sse`). */
+export function resolveSseUrl(): string {
+  const base = resolveApiBase();
+  try {
+    const origin =
+      base || (typeof window !== 'undefined' ? window.location.origin : '');
+    if (!origin) return '/api/sse';
+    return new URL('/api/sse', origin).toString();
+  } catch {
+    return '/api/sse';
+  }
 }
 
 export function getTenantId(): string {
@@ -468,14 +511,24 @@ export async function guardianFetch(
   const base = resolveApiBase();
   const normalized = path.startsWith('/') ? path : `/${path}`;
   const url = path.startsWith('http') ? path : base ? `${base}${normalized}` : normalized;
-  return fetch(url, {
-    credentials: 'include',
-    ...init,
-    headers: {
-      ...buildAuthHeaders(),
-      ...(init?.headers as GuardianHeaders),
-    },
-  });
+  try {
+    return await fetch(url, {
+      credentials: 'include',
+      ...init,
+      headers: {
+        ...buildAuthHeaders(),
+        ...(init?.headers as GuardianHeaders),
+      },
+    });
+  } catch (err) {
+    // Browser throws TypeError "Failed to fetch" when API is down or unreachable
+    const message = err instanceof Error ? err.message : 'Network error';
+    return new Response(JSON.stringify({ error: message, available: false }), {
+      status: 503,
+      statusText: 'Service Unavailable',
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
 }
 
 export async function fetchAuthStatus(): Promise<AuthStatus> {
@@ -568,11 +621,17 @@ export async function fetchAudit(opts?: {
   limit?: number;
   action?: string;
   server?: string;
+  windowDays?: number;
+  region?: string;
 }): Promise<AuditResponse | null> {
   const params = new URLSearchParams();
   if (opts?.limit) params.set('limit', String(opts.limit));
   if (opts?.action) params.set('action', opts.action);
   if (opts?.server) params.set('server', opts.server);
+  if (opts?.windowDays && Number.isFinite(opts.windowDays)) {
+    params.set('window', String(opts.windowDays));
+  }
+  if (opts?.region) params.set('region', opts.region);
   const q = params.toString();
   const res = await guardianFetch(`/api/aggregate/audit${q ? `?${q}` : ''}`);
   if (!res.ok) return null;
@@ -990,9 +1049,17 @@ export async function runSecuritySwarm(opts?: {
 }
 
 export async function fetchSwarmStatus(): Promise<SwarmJobStatus | null> {
-  const res = await guardianFetch('/api/security-swarm/status');
-  if (!res.ok) return null;
-  return (await res.json()) as SwarmJobStatus;
+  try {
+    const res = await guardianFetch('/api/security-swarm/status');
+    if (!res.ok) return null;
+    try {
+      return (await res.json()) as SwarmJobStatus;
+    } catch {
+      return null;
+    }
+  } catch {
+    return null;
+  }
 }
 
 export async function fetchSwarmReportPreview(): Promise<string | null> {
@@ -1079,6 +1146,74 @@ export async function pollAiThreats(): Promise<{ ok: boolean; status?: ThreatInt
   if (!res.ok) return { ok: false, error: await parseApiError(res) };
   const status = (await res.json()) as ThreatIntelStatus;
   return { ok: true, status };
+}
+
+export type AiLearningCycleResult = {
+  ok: boolean;
+  error?: string;
+  suggestionCount?: number;
+  autoAppliedCount?: number;
+  insightCount?: number;
+  report?: Record<string, unknown>;
+};
+
+export async function runAiLearningCycle(): Promise<AiLearningCycleResult> {
+  const headers = await buildMutatingHeaders();
+  const res = await guardianFetch('/api/ai/learning/cycle', { method: 'POST', headers, body: '{}' });
+  const body = (await res.json().catch(() => ({}))) as AiLearningCycleResult & { error?: string };
+  if (!res.ok) return { ok: false, error: body.error || (await parseApiError(res)) };
+  return body;
+}
+
+export type PromotionStats = {
+  enabled: boolean;
+  dailyQuota: { used: number; max: number };
+  totalPromoted: number;
+  byCategory?: Record<string, number>;
+  lastPromotionAt: string | null;
+  error?: string;
+};
+
+export async function fetchPromotionStats(): Promise<PromotionStats> {
+  const res = await guardianFetch('/api/threat-discovery/promote/stats');
+  if (!res.ok) {
+    return {
+      enabled: false,
+      dailyQuota: { used: 0, max: 0 },
+      totalPromoted: 0,
+      lastPromotionAt: null,
+      error: await parseApiError(res),
+    };
+  }
+  return (await res.json()) as PromotionStats;
+}
+
+export type ThreatDiscoverySchedulerStatus = {
+  running: boolean;
+  lastRunAt: string | null;
+  totalRuns?: number;
+  lastRunOk?: boolean;
+  message?: string;
+};
+
+export async function fetchThreatDiscoverySchedulerStatus(): Promise<ThreatDiscoverySchedulerStatus> {
+  const res = await guardianFetch('/api/threat-discovery/scheduler/status');
+  if (!res.ok) {
+    return { running: false, lastRunAt: null, message: await parseApiError(res) };
+  }
+  return (await res.json()) as ThreatDiscoverySchedulerStatus;
+}
+
+export async function startThreatDiscoveryScheduler(): Promise<boolean> {
+  const headers = await buildMutatingHeaders();
+  const res = await guardianFetch('/api/threat-discovery/scheduler/start', { method: 'POST', headers, body: '{}' });
+  return res.ok;
+}
+
+export async function stopThreatDiscoveryScheduler(): Promise<boolean> {
+  const headers = await buildMutatingHeaders();
+  const res = await guardianFetch('/api/threat-discovery/scheduler/stop', { method: 'POST', headers, body: '{}' });
+  return res.ok;
 }
 
 export async function parseApiError(res: Response): Promise<string> {
@@ -1485,16 +1620,16 @@ export async function fetchServerRegistry(): Promise<ServerRegistryEntry[]> {
   return body.servers || [];
 }
 
-export function resolveWsUrl(): string {
+export function resolveWsUrl(): string | null {
+  if (!usesProxyWebSocket()) return null;
   const base = resolveApiBase();
   try {
-    const origin = base || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:4000');
-    const u = new URL('/ws', origin);
+    const u = new URL('/ws', base);
     u.protocol = u.protocol === 'https:' ? 'wss:' : 'ws:';
     const tenant = getTenantId();
     if (tenant) u.searchParams.set('tenant', tenant);
     return u.toString();
   } catch {
-    return 'ws://localhost:4000/ws';
+    return null;
   }
 }

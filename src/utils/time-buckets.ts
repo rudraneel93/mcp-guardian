@@ -6,18 +6,40 @@ export type DashboardWindow = '1h' | '12h' | '24h' | '7d' | '30d' | '90d';
 
 export type BucketGranularity = 'hour' | 'day';
 
+/**
+ * Parse a window descriptor into days (fractional allowed for sub-day windows).
+ *
+ * Accepted forms (case-insensitive):
+ *   - Label: '1h', '12h', '24h', '7d', '30d', '90d'
+ *   - Days (integer or fractional): '7', '0.5', '0.0416' (1h)
+ *   - number: 7, 0.5, 1/24
+ *
+ * Always returns a finite number in the inclusive range [1/24, 90].
+ */
 export function parseWindowDays(window: string | number | undefined, fallback = 7): number {
-  if (typeof window === 'number' && Number.isFinite(window)) {
-    return Math.min(90, Math.max(1 / 24, Math.floor(window)));
+  const clamp = (n: number): number => Math.min(90, Math.max(1 / 24, n));
+
+  if (typeof window === 'number' && Number.isFinite(window) && window > 0) {
+    return clamp(window);
   }
   const raw = String(window ?? '').trim();
-  // Parse 1h, 12h, 24h, 7d, 30d, 90d
-  const h = raw.match(/^(\d+)h$/i);
-  if (h) return Math.min(90, Math.max(1 / 24, parseInt(h[1], 10) / 24));
-  const d = raw.match(/^(\d+)d$/i);
-  if (d) return Math.min(90, Math.max(1, parseInt(d[1], 10)));
-  const n = parseInt(raw, 10);
-  if (Number.isFinite(n) && n > 0) return Math.min(90, Math.max(1 / 24, n));
+  if (!raw) return fallback;
+
+  // Label form: '1h', '12h', '24h', '7d', '30d', '90d'
+  const h = raw.match(/^(\d+(?:\.\d+)?)h$/i);
+  if (h) {
+    const hours = parseFloat(h[1]);
+    if (Number.isFinite(hours) && hours > 0) return clamp(hours / 24);
+  }
+  const d = raw.match(/^(\d+(?:\.\d+)?)d$/i);
+  if (d) {
+    const days = parseFloat(d[1]);
+    if (Number.isFinite(days) && days > 0) return clamp(days);
+  }
+
+  // Bare numeric: 7, 0.5, 0.0416 — fractional is honored
+  const n = parseFloat(raw);
+  if (Number.isFinite(n) && n > 0) return clamp(n);
   return fallback;
 }
 

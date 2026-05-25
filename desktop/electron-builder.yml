@@ -1,0 +1,35 @@
+appId: com.mcpguardian.soc
+productName: MCP Guardian SOC
+copyright: Copyright © MCP Guardian
+directories:
+  output: dist/installer/desktop
+  buildResources: desktop/resources
+files:
+  - dist/**/*
+  - deploy/dashboard-spa/out/**/*
+  - desktop/main.mjs
+  - default-policy.yaml
+  - package.json
+extraMetadata:
+  main: desktop/main.mjs
+asar: true
+win:
+  target:
+    - nsis
+  artifactName: mcp-guardian-soc-${version}-win-${arch}.${ext}
+mac:
+  target:
+    - dmg
+  artifactName: mcp-guardian-soc-${version}-mac-${arch}.${ext}
+linux:
+  target:
+    - AppImage
+    - deb
+  artifactName: mcp-guardian-soc-${version}-linux-${arch}.${ext}
+  maintainer: MCP Guardian <ops@mcp-guardian.dev>
+  category: Utility
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  shortcutName: MCP Guardian SOC

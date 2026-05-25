@@ -1,0 +1,150 @@
+{
+  "timestamp": "2026-05-24T16:38:22.861Z",
+  "configsDir": "/Users/rudraneeldas/Desktop/mcp-guardian/guardian-configs",
+  "summary": {
+    "total": 5,
+    "ok": 4,
+    "failed": 1,
+    "skipped": 0,
+    "allOk": false
+  },
+  "servers": [
+    {
+      "serverName": "echo-test",
+      "configPath": "/Users/rudraneeldas/Desktop/mcp-guardian/guardian-configs/echo-test.json",
+      "status": "failed",
+      "error": "Expected property name or '}' in JSON at position 1 (line 1 column 2)",
+      "probes": [],
+      "toolCount": 0,
+      "toolNames": [],
+      "latencyMs": 0
+    },
+    {
+      "serverName": "filesystem",
+      "configPath": "/Users/rudraneeldas/Desktop/mcp-guardian/guardian-configs/filesystem.json",
+      "transport": "stdio",
+      "status": "ok",
+      "toolCount": 14,
+      "toolNames": [
+        "read_file",
+        "read_text_file",
+        "read_media_file",
+        "read_multiple_files",
+        "write_file",
+        "edit_file",
+        "create_directory",
+        "list_directory",
+        "list_directory_with_sizes",
+        "directory_tree",
+        "move_file",
+        "search_files",
+        "get_file_info",
+        "list_allowed_directories"
+      ],
+      "probes": [
+        {
+          "name": "tools/list",
+          "ok": true,
+          "detail": "14 tools"
+        },
+        {
+          "name": "benign-list",
+          "ok": true,
+          "detail": "Would call list_directory (skipped live call in audit-safe probe)"
+        }
+      ],
+      "error": null,
+      "latencyMs": 781
+    },
+    {
+      "serverName": "fixture_echo",
+      "configPath": "/Users/rudraneeldas/Desktop/mcp-guardian/guardian-configs/fixture_echo.json",
+      "transport": "stdio",
+      "status": "ok",
+      "toolCount": 3,
+      "toolNames": [
+        "echo",
+        "add",
+        "search"
+      ],
+      "probes": [
+        {
+          "name": "tools/list",
+          "ok": true,
+          "detail": "3 tools"
+        }
+      ],
+      "error": null,
+      "latencyMs": 23
+    },
+    {
+      "serverName": "github",
+      "configPath": "/Users/rudraneeldas/Desktop/mcp-guardian/guardian-configs/github.json",
+      "transport": "stdio",
+      "status": "ok",
+      "toolCount": 26,
+      "toolNames": [
+        "create_or_update_file",
+        "search_repositories",
+        "create_repository",
+        "get_file_contents",
+        "push_files",
+        "create_issue",
+        "create_pull_request",
+        "fork_repository",
+        "create_branch",
+        "list_commits",
+        "list_issues",
+        "update_issue",
+        "add_issue_comment",
+        "search_code",
+        "search_issues",
+        "search_users",
+        "get_issue",
+        "get_pull_request",
+        "list_pull_requests",
+        "create_pull_request_review",
+        "merge_pull_request",
+        "get_pull_request_files",
+        "get_pull_request_status",
+        "update_pull_request_branch",
+        "get_pull_request_comments",
+        "get_pull_request_reviews"
+      ],
+      "probes": [
+        {
+          "name": "tools/list",
+          "ok": true,
+          "detail": "26 tools"
+        }
+      ],
+      "error": null,
+      "latencyMs": 1959
+    },
+    {
+      "serverName": "puppeteer",
+      "configPath": "/Users/rudraneeldas/Desktop/mcp-guardian/guardian-configs/puppeteer.json",
+      "transport": "stdio",
+      "status": "ok",
+      "toolCount": 7,
+      "toolNames": [
+        "puppeteer_navigate",
+        "puppeteer_screenshot",
+        "puppeteer_click",
+        "puppeteer_fill",
+        "puppeteer_select",
+        "puppeteer_hover",
+        "puppeteer_evaluate"
+      ],
+      "probes": [
+        {
+          "name": "tools/list",
+          "ok": true,
+          "detail": "7 tools"
+        }
+      ],
+      "error": null,
+      "latencyMs": 1051
+    }
+  ]
+}

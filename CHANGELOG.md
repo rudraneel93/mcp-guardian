@@ -2,6 +2,18 @@
 
 All notable changes to MCP Guardian will be documented in this file.
 
+## [3.2.6] - 2026-05-24
+
+### Fixed
+
+- **Dashboard SPA `ThreatDiscoveryAutomation` bare `fetch()` calls** — Replaced all 7 direct `fetch()` calls with `guardianFetch()` + `buildMutatingHeaders()` so the scheduler panel correctly resolves `apiBase`, sends auth/CSRF headers, and renders even when individual endpoints fail. Previously the start-scheduler button stayed greyed out and the component crashed on any API error.
+- **Dashboard "No data in selected window" on all charts** — Community tier license gate was silently disabling the dashboard REST API (`"Dashboard API disabled; WebSocket at /ws only"`). Dashboard now runs with `GUARDIAN_CI_BYPASS_LICENSE=true` for local development, or via standalone `dashboard:serve` script.
+- **Cline MCP wrapper port conflicts** — Per-server `guardian-proxy.sh` wrappers in `cline_mcp_settings.json` now set `DASHBOARD_ENABLED=false`, `GUARDIAN_WS_ENABLED=false`, `METRICS_ENABLED=false` so they don't compete for port 4000 with the central dashboard proxy.
+
+### Changed
+
+- **SPA version** — `@mcp-guardian/dashboard-spa` bumped to `2.8.1`.
+
 ## [3.2.2] - 2026-05-24
 
 ### Added

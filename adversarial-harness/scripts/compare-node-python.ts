@@ -63,21 +63,37 @@ function main() {
     process.exit(1);
   }
 
-  const fixtures = [
-    ...loadFixtures(join(REPO, 'corpus'), 'corpus'),
-    ...loadFixtures(join(ROOT, 'fixtures', 'matrix'), 'matrix'),
-    ...loadFixtures(join(ROOT, 'fixtures', 'custom-attacks'), 'custom'),
-  ];
+  const fastMode =
+    process.env['SWARM_FAST'] === 'true' || process.env['SWARM_MODE'] === 'fast';
+  const fixtures = fastMode
+    ? loadFixtures(join(REPO, 'corpus'), 'corpus')
+    : [
+        ...loadFixtures(join(REPO, 'corpus'), 'corpus'),
+        ...loadFixtures(join(ROOT, 'fixtures', 'matrix'), 'matrix'),
+        ...loadFixtures(join(ROOT, 'fixtures', 'custom-attacks'), 'custom'),
+      ];
+
+  if (fixtures.length === 0) {
+    console.error('No parity fixtures loaded');
+    process.exit(1);
+  }
 
   const pyInput = fixtures.map((f) => ({ ...f, id: f.id }));
 
   const pyBin = process.env['HARNESS_PYTHON'] || 'python3';
+  const pyTimeoutMs = fastMode ? 120_000 : 300_000;
   const py = spawnSync(pyBin, [join(ROOT, 'python', 'parity_batch.py')], {
     input: JSON.stringify(pyInput),
     encoding: 'utf-8',
     cwd: join(ROOT, 'python'),
+    timeout: pyTimeoutMs,
+    maxBuffer: 16 * 1024 * 1024,
     env: { ...process.env, PYTHONPATH: join(ROOT, 'python'), GUARDIAN_DISABLE_SEMANTIC: 'true' },
   });
+  if (py.error?.code === 'ETIMEDOUT' || py.signal === 'SIGTERM') {
+    console.error(`Python parity timed out after ${pyTimeoutMs / 1000}s (${fixtures.length} fixtures)`);
+    process.exit(1);
+  }
   if (py.status !== 0) {
     console.error(py.stderr || py.stdout);
     process.exit(1);

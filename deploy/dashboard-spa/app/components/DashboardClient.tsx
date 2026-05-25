@@ -38,6 +38,7 @@ import { HealthReliabilityPanel } from './dashboard/HealthReliabilityPanel';
 import { AuditExplorerPanel } from './dashboard/AuditExplorerPanel';
 import { FleetOverviewPanel } from './dashboard/FleetOverviewPanel';
 import { AnalyticsChartsHub } from './dashboard/AnalyticsChartsHub';
+import { SocQuickActions } from './dashboard/SocQuickActions';
 import { DashboardWindowProvider, DashboardWindowSelector } from './dashboard/DashboardWindowContext';
 import { DashboardRegionProvider, DashboardRegionSelector } from './dashboard/DashboardRegionContext';
 import { VisualsProvider } from './dashboard/VisualsProvider';
@@ -69,7 +70,7 @@ const TABS: { id: TabId; label: string }[] = [
   { id: 'security', label: 'Security' },
   { id: 'cost', label: 'Cost' },
   { id: 'health', label: 'Health' },
-  { id: 'ai', label: 'AI copilot' },
+  { id: 'ai', label: 'SOC / AI' },
   { id: 'enterprise-ai', label: 'Enterprise AI' },
   { id: 'threat-discovery', label: 'Threat Discovery' },
   { id: 'policy', label: 'Policy' },
@@ -156,7 +157,7 @@ export function DashboardClient() {
           pollFailuresRef.current = 0;
           setApiUnreachable(false);
           applyStatus(
-            'Dashboard API connected — no proxy history DB (use pnpm dashboard:proxy for live metrics)',
+            'SOC API connected — no traffic in history DB yet (run MCP proxy to record calls)',
             false,
           );
         } else {
@@ -165,7 +166,7 @@ export function DashboardClient() {
             setApiUnreachable(true);
             if (!ws.connected) {
               applyStatus(
-                'API unavailable — check DASHBOARD_ENABLED on :4000, auth, or rate limit (429)',
+                'API unavailable — run pnpm serve (SOC API :4040) or pnpm dashboard:proxy (:4000)',
                 true,
               );
             }
@@ -180,7 +181,7 @@ export function DashboardClient() {
       pollFailuresRef.current = 0;
       setApiUnreachable(false);
       if (!ws.connected) {
-        applyStatus('Connected — live data from proxy history DB', false);
+        applyStatus('Connected — live data from Guardian history DB', false);
       } else {
         applyStatus(ws.statusText, ws.statusIsError);
       }
@@ -205,6 +206,18 @@ export function DashboardClient() {
 
   useEffect(() => {
     setReady(true);
+  }, []);
+
+  /** Remove invalid ?apiBase=null from the URL (causes browser "null is unreachable" if followed). */
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const apiBase = params.get('apiBase');
+    if (apiBase !== 'null' && apiBase !== 'undefined') return;
+    params.delete('apiBase');
+    const qs = params.toString();
+    const next = `${window.location.pathname}${qs ? `?${qs}` : ''}${window.location.hash}`;
+    window.history.replaceState({}, '', next);
   }, []);
 
   const onAuthenticated = useCallback(() => {
@@ -246,6 +259,17 @@ export function DashboardClient() {
     });
   }, [ws.auditPatch]);
 
+  /** After swarm/analysis completes, reload every REST dataset (metrics, audit, swarm artifacts, visuals). */
+  useEffect(() => {
+    if (!ready || ws.swarmDoneTick <= 0) return;
+    void refreshAll();
+  }, [ready, ws.swarmDoneTick, refreshAll]);
+
+  useEffect(() => {
+    if (!ready || ws.aiRefreshTick <= 0) return;
+    void refreshAll();
+  }, [ready, ws.aiRefreshTick, refreshAll]);
+
   const onFpReject = async (rule: string, pattern: string) => {
     if (!hasPermission(roles, 'policy_mutate')) {
       setActionMsg('Requires operator role for FP reject');
@@ -270,7 +294,7 @@ export function DashboardClient() {
     <DashboardWindowProvider>
     <DashboardRegionProvider>
     <VisualsProvider refreshKey={refreshTick} pollMs={REST_POLL_MS}>
-    <main>
+    <main className="dashboard-live-root">
       <header>
         <h1>MCP Guardian</h1>
         <p className={statusIsError ? 'status status-error' : 'status'} suppressHydrationWarning>
@@ -305,6 +329,15 @@ export function DashboardClient() {
 
       {tab === 'overview' && (
         <>
+          <SocQuickActions
+            roles={roles}
+            onAction={(m) => setActionMsg(m)}
+            lastUpdated={displayMetrics?.lastUpdated}
+            onOpenThreatDiscovery={() => {
+              setTab('threat-discovery');
+              setThreatDiscoverySubTab('threat-lab');
+            }}
+          />
           <ExecutiveOverviewPanel
             refreshKey={refreshTick}
             metrics={displayMetrics}
@@ -426,12 +459,10 @@ export function DashboardClient() {
 function MotionlessBanner() {
   return (
     <div className="banner" role="status">
-      Guardian API not reachable (or rate-limited). Run the proxy with{' '}
-      <code>DASHBOARD_ENABLED=true</code> on port 4000, restart after{' '}
-      <code>pnpm dashboard:build</code>, or set{' '}
-      <code>?apiBase=http://localhost:4000</code> (and <code>apiKey=</code> if required). If you
-      see HTTP 429 in the network tab, refresh after a minute or raise{' '}
-      <code>GUARDIAN_DASHBOARD_API_RATE_LIMIT</code>.
+      Guardian API not reachable. Start <code>pnpm serve</code> (UI :3000, SOC API :4040 with{' '}
+      <code>/api</code> proxied), or run the MCP proxy with <code>DASHBOARD_ENABLED=true</code> on
+      port 4000 and set <code>?apiBase=http://localhost:4000</code> if the UI is hosted elsewhere.
+      If you see HTTP 429, wait and retry or raise <code>GUARDIAN_DASHBOARD_API_RATE_LIMIT</code>.
     </div>
   );
 }
