@@ -27,7 +27,6 @@ import gatesRaw          from '../app/data/gates.json';
 import guardianCfgsRaw   from '../app/data/guardian-configs.json';
 import threatLabJobRaw   from '../app/data/threat-lab-job.json';
 import autoResJobRaw     from '../app/data/auto-research-job.json';
-import benchReportRaw    from '../app/data/benchmark-report.json';
 
 // ── Attack Harness (155 real adversarial probes) ─────────────────
 export interface Attack {
