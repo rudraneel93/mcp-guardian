@@ -1,6 +1,6 @@
 {
   "name": "@mcp-guardian/server",
-  "version": "3.2.5",
+  "version": "3.2.7",
   "description": "Security, cost, and health governance proxy for MCP infrastructure — three-layer detection engine (regex + schema + LLM), monorepo, corpus, CI/CD",
   "type": "module",
   "files": [
@@ -117,6 +117,10 @@
     "dashboard:serve": "node scripts/serve.mjs",
     "dashboard:proxy": "sh scripts/start-dashboard-proxy.sh",
     "dashboard:dev": "npm run dev --prefix deploy/dashboard-spa",
+    "soc:api": "tsx src/soc-api-server.ts",
+    "soc:api:dev": "SOC_API_PORT=4040 tsx watch src/soc-api-server.ts",
+    "soc:full": "concurrently --kill-others \"pnpm soc:api:dev\" \"pnpm dashboard:dev\"",
+    "soc:serve": "node scripts/serve.mjs",
     "cloud:dev": "pnpm --filter @mcp-guardian/cloud dev",
     "cloud:build": "pnpm --filter @mcp-guardian/cloud build",
     "cloud:test": "pnpm --filter @mcp-guardian/cloud test",
@@ -183,6 +187,7 @@
   "devDependencies": {
     "@modelcontextprotocol/server-filesystem": "^2026.1.14",
     "@types/better-sqlite3": "^7.6.13",
+    "@types/express": "^5.0.6",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.0.0",
     "@types/pg": "^8.20.0",

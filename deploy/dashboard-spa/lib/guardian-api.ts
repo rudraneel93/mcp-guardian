@@ -569,11 +569,17 @@ export async function fetchAudit(opts?: {
   limit?: number;
   action?: string;
   server?: string;
+  windowDays?: number;
+  region?: string;
 }): Promise<AuditResponse | null> {
   const params = new URLSearchParams();
   if (opts?.limit) params.set('limit', String(opts.limit));
   if (opts?.action) params.set('action', opts.action);
   if (opts?.server) params.set('server', opts.server);
+  if (opts?.windowDays && Number.isFinite(opts.windowDays)) {
+    params.set('window', String(opts.windowDays));
+  }
+  if (opts?.region) params.set('region', opts.region);
   const q = params.toString();
   const res = await guardianFetch(`/api/aggregate/audit${q ? `?${q}` : ''}`);
   if (!res.ok) return null;

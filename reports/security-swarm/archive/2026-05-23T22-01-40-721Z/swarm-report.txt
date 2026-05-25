@@ -1,0 +1,89 @@
+========================================================================
+MCP Guardian — Security Swarm Report
+========================================================================
+
+Generated:  2026-05-23T21:54:34.150Z
+Commit:     8691d4fb2536ccd0dddf9d1ff267c2c86b013411
+Mode:       fast
+Output:     live
+
+Overall:    FAIL
+
+------------------------------------------------------------------------
+Gates
+------------------------------------------------------------------------
+  Corpus       PASS
+  Parity       PASS
+  Steps        FAIL
+  Bypasses     7 (max 0)
+  Scout        PASS
+
+------------------------------------------------------------------------
+Steps
+------------------------------------------------------------------------
+  [PASS] scout-audit                         1.7s  (exit 0)
+  [PASS] pnpm-build                            3s  (exit 0)
+  [FAIL] vitest-policy-proxy-utils          94.4s  (exit 1)
+  [FAIL] corpus-eval                         0.6s  (exit 1)
+  [PASS] setup-python-venv                   0.5s  (exit 0)
+  [PASS] harness-node-tests                 45.5s  (exit 0)
+  [FAIL] harness-parity                      0.2s  (exit 1)
+  [PASS] evasion-generate                      0s  (exit 0)
+
+------------------------------------------------------------------------
+Corpus
+------------------------------------------------------------------------
+  entries:           228
+  fn:                0
+  fp:                0
+  attack block rate: 100.0%
+  benign pass rate:  100.0%
+
+------------------------------------------------------------------------
+Parity
+------------------------------------------------------------------------
+  agreement:         472/472
+  agreement rate:    100.0%
+  corpus mismatches: 0
+
+------------------------------------------------------------------------
+Bypasses
+------------------------------------------------------------------------
+  detected:          7
+  baseline-known:    0
+  net-new:           7
+
+  - [NEW] adv-123
+  - [NEW] adv-124
+  - [NEW] adv-125
+  - [NEW] adv-126
+  - [NEW] adv-127
+  - [NEW] adv-128
+  - [NEW] adv-130
+
+------------------------------------------------------------------------
+Findings
+------------------------------------------------------------------------
+  [info] scout: Moderate advisories: 3
+  [critical] step: vitest-policy-proxy-utils failed (exit 1)
+  [critical] step: corpus-eval failed (exit 1)
+  [critical] step: harness-parity failed (exit 1)
+  [critical] evasion: 7 net-new bypass(es) vs baseline manifest
+
+------------------------------------------------------------------------
+Timings
+------------------------------------------------------------------------
+  total:             145.9s
+  scout-audit                          1.7s
+  pnpm-build                             3s
+  vitest-policy-proxy-utils           94.4s
+  corpus-eval                          0.6s
+  setup-python-venv                    0.5s
+  harness-node-tests                  45.5s
+  harness-parity                       0.2s
+  evasion-generate                       0s
+
+------------------------------------------------------------------------
+Recommended profile: high-paranoia
+
+Summary (markdown): reports/security-swarm/summary.md

@@ -1,0 +1,77 @@
+========================================================================
+MCP Guardian — Security Swarm Report
+========================================================================
+
+Generated:  2026-05-23T17:46:41.951Z
+Commit:     ae38d6f6332550b106d29ec15ad107b4aecccab5
+Mode:       fast
+Output:     live
+
+Overall:    PASS
+
+------------------------------------------------------------------------
+Gates
+------------------------------------------------------------------------
+  Corpus       PASS
+  Parity       PASS
+  Steps        PASS
+  Bypasses     0 (max 0)
+  Scout        PASS
+
+------------------------------------------------------------------------
+Steps
+------------------------------------------------------------------------
+  [PASS] scout-audit                           2s  (exit 0)
+  [PASS] pnpm-build                          3.4s  (exit 0)
+  [PASS] vitest-policy-proxy-utils          72.7s  (exit 0)
+  [PASS] corpus-eval                         1.5s  (exit 0)
+  [PASS] setup-python-venv                   0.5s  (exit 0)
+  [PASS] harness-node-tests                 43.9s  (exit 0)
+  [PASS] harness-parity                     67.8s  (exit 0)
+
+------------------------------------------------------------------------
+Corpus
+------------------------------------------------------------------------
+  entries:           228
+  fn:                0
+  fp:                0
+  attack block rate: 100.0%
+  benign pass rate:  100.0%
+
+------------------------------------------------------------------------
+Parity
+------------------------------------------------------------------------
+  agreement:         463/463
+  agreement rate:    100.0%
+  corpus mismatches: 0
+
+------------------------------------------------------------------------
+Bypasses
+------------------------------------------------------------------------
+  detected:          0
+  baseline-known:    0
+  net-new:           0
+
+  (none detected)
+
+------------------------------------------------------------------------
+Findings
+------------------------------------------------------------------------
+  [info] scout: Moderate advisories: 3
+
+------------------------------------------------------------------------
+Timings
+------------------------------------------------------------------------
+  total:             191.8s
+  scout-audit                            2s
+  pnpm-build                           3.4s
+  vitest-policy-proxy-utils           72.7s
+  corpus-eval                          1.5s
+  setup-python-venv                    0.5s
+  harness-node-tests                  43.9s
+  harness-parity                      67.8s
+
+------------------------------------------------------------------------
+Recommended profile: hybrid
+
+Summary (markdown): reports/security-swarm/summary.md

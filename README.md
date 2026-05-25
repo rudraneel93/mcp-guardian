@@ -1,1690 +1,302 @@
 # MCP Guardian
 
-**Runtime security, cost governance, and health monitoring proxy for MCP infrastructure.**
-
-**Website → [mcp-guardian-cloud.vercel.app](https://mcp-guardian-cloud.vercel.app)** — product overview, Security Swarm + LLM threat research architecture diagrams, competitive USP, evidence stats, Pro checkout ($4.99 lifetime), and optional [cloud console](https://mcp-guardian-cloud.vercel.app/dashboard).
+**A security layer that sits between your AI agent and its tools — so nothing bad gets through.**
 
 [![npm version](https://img.shields.io/npm/v/@mcp-guardian/server)](https://www.npmjs.com/package/@mcp-guardian/server)
 [![npm downloads](https://img.shields.io/npm/dm/@mcp-guardian/server)](https://www.npmjs.com/package/@mcp-guardian/server)
-[![Website](https://img.shields.io/badge/Website-mcp--guardian--cloud.vercel.app-0070f3)](https://mcp-guardian-cloud.vercel.app/)
-[![mcp-guardian MCP server](https://glama.ai/mcp/servers/rudraneel93/mcp-guardian/badges/score.svg)](https://glama.ai/mcp/servers/rudraneel93/mcp-guardian)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue)](https://www.typescriptlang.org/)
-[![MCP SDK](https://img.shields.io/badge/MCP_SDK-1.25-green)](https://github.com/modelcontextprotocol/typescript-sdk)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 [![CI](https://github.com/rudraneel93/mcp-guardian/actions/workflows/ci.yml/badge.svg)](https://github.com/rudraneel93/mcp-guardian/actions/workflows/ci.yml)
 
-**Current release: [v3.2.5](CHANGELOG.md#323---2026-05-24)** — Self-sustaining threat discovery, 17-class argument scanner, enterprise-ready hardening. Prior: [v3.2.2](CHANGELOG.md#322---2026-05-24) (Enterprise AI), [v3.2.1](CHANGELOG.md#321---2026-05-23) (MCP Tests 31), [v3.2.0](CHANGELOG.md#320---2026-05-23) (enterprise dashboard), [v3.1.0](CHANGELOG.md#310---2026-05-23) (Threat Discovery).
-
-**v3.2.5 (Self-sustaining threat discovery + enterprise hardening)** — **Self-sustaining threat discovery loop** (auto-corpus promoter bridges adversarial-harness → corpus/attacks/, CRON scheduler daemon); **17-class comprehensive argument scanner** (550+ regex patterns across SQL/NoSQL, boundary evasion, credential exfil, shell obfuscation, context injection, SSRF, XML/XXE, LDAP, deserialization, ReDoS, dangerous JS, file inclusion, log injection, polyglot, HTTP smuggling, GraphQL, JWT/OAuth, ZIP slip, type juggling — registered as `MCPG-A-*`); **Shannon entropy secret detection** (`MCPG-A-ENT-001`); **3-layer ML anomaly detection engine** (argument scoring, behavioral baseline deviation, kill-chain intent tracking); **schema injection detection** (`MCPG-S-010`); **concurrency fix** (semantic queue 100→1000 slots); **Ed25519 CI token** license enforcement; **license dev unlock removed** (use real license keys); **dashboard auto-loads proxy history.db** on startup; **304 corpus fixtures** (100% recall, 0% FPR). Requires `GUARDIAN_LICENSE_KEY` for Pro features ([PRO_SETUP.md](docs/PRO_SETUP.md)).
-
-**v3.2.2 (Enterprise AI + threat-intel guard)** — **Enterprise AI** dashboard tab (LoRA, supply chain, tribunal, compliance, incident investigator); **threat-intel** policy guard for CVE/Threat Lab probes on allowlisted tools; Security Swarm fast-mode bypass gate fix; `pnpm dashboard:build` in CI.
-
-**v3.2.1 (MCP Tests 31 closure)** — Worker-thread regex eval, semantic burst/USD rate limits, 50-replica CI scale pilots, swarm archival/alerting, unified multi-region data reader, cloud fleet heartbeat + policy publish, dashboard chart-kit, GxP template, CodeQL SAST.
-
-**v3.2.0 (Enterprise dashboard)** — Redesigned Pro dashboard with executive KPIs, cost/security/health panels, measured proxy insights, and session-gated swarm artifacts so stale CI reports never masquerade as live data.
-
-**v3.1.0 (Threat Discovery)** — **Threat Lab** (Ollama/Qwen LLM threat discovery), **Auto Threat Research** (runtime + batch corpus writes), and a dedicated **Threat Discovery** dashboard tab with architecture view, run controls, and candidate review. Requires local Ollama + `qwen3:8b` or cloud LLM — not bundled with npm ([PRO_SETUP.md](docs/PRO_SETUP.md#llm-prerequisites) · [THREAT_LAB.md](docs/THREAT_LAB.md)).
-
-**v3.0.0 (Pro paywall hardening)** — Runtime enforcement on Pro surfaces: **Security Swarm CLI** (`pnpm security-swarm:*`), **fleet** (`mcp-guardian fleet`, TUI Fleet tab), **AI attack learning** on the proxy, and **dashboard startup** when `DASHBOARD_ENABLED=true`. Requires `GUARDIAN_LICENSE_KEY` + `GUARDIAN_CONTROL_PLANE_URL` ([PRO_SETUP.md](docs/PRO_SETUP.md)). **`GUARDIAN_DEV_UNLOCK_ALL` removed in v3.2.5** — use a valid `GUARDIAN_LICENSE_KEY` or Ed25519-signed `GUARDIAN_CI_TOKEN` for CI pipelines. **Dual license:** MIT [Community Scope](COMMUNITY_SCOPE.md) + [LICENSE-PRO](LICENSE-PRO) for Pro paths.
-
-### Why MCP Guardian (vs generic gateways)
-
-AI agents connect to databases, GitHub, Slack, and internal APIs through MCP — often with **no security layer** between the agent and the tool server. Generic API gateways (Kong, AWS API Gateway) do not understand tool-call semantics, prompt injection, rug-pull detection, or cross-tool chaining.
-
-| | MCP Guardian | Generic gateway / DIY middleware |
-|---|--------------|----------------------------------|
-| **Protocol** | Native stdio, HTTP, SSE, WebSocket | HTTP-only; breaks on MCP SDK updates |
-| **Detection** | **557+** adversarial fixtures + normalization pipeline | YAML-only policies miss ~75% without layered guards |
-| **Response security** | **267** secret/PII rules, context-aware DLP | Not applicable |
-| **Continuous red-team** | Security Swarm + Auto Threat Research (self-improving) | Manual pen tests |
-| **Enterprise deploy** | Helm chart, Postgres RLS, DPoP, audit hash chain | Weeks of custom integration |
-
-Full narrative, diagrams, and evidence on the **[marketing site](https://mcp-guardian-cloud.vercel.app/)**.
-
-### Security Swarm architecture
-
-![Security Swarm — agentic architecture (CI agents + runtime learning loop)](docs/assets/security-swarm-architecture.png)
-
-*Closed-loop workflow: **CI track** (Scout → Corpus → Evasion → Parity → Proxy → Report) gates policy quality; **runtime track** (BlockGuard → InstantLearner → SemanticAuditor → PatternSynthesizer → Calibrator) runs on every proxied `tools/call`. **Solo analyze** (`pnpm security-swarm:analyze`, **Pro license required v3.0+**) adds live MCP probes, personalized traffic from `history.db`, visuals, and plain-English `report.json` for the dashboard. Full agent table, gates, and env: [Security Swarm (CI + runtime learning loop)](#security-swarm-ci--runtime-learning-loop).*
-
-#### LLM Threat Discovery (Threat Lab)
-
-![LLM Threat Discovery — human review before policy apply](docs/assets/llm-threat-discovery-architecture.png)
-
-*Pro-tier **Threat Lab**: swarm bypasses, semantic TPs, ThreatIntel CVEs, and corpus seeds → local Ollama LLM proposes attack fixtures + optional YAML rules → validation gates → signed manifest → **human accept/reject** before policy changes. [THREAT_LAB.md](docs/THREAT_LAB.md)*
-
-#### Self-Sustaining Threat Research (Auto Research)
-
-![Self-Sustaining Threat Research — autonomous adv fixture loop](docs/assets/auto-threat-research-architecture.png)
-
-*Pro-tier **Auto Threat Research**: live proxy detections (semantic flags, repeat blocks, ThreatIntel) → debounced queue → LLM research → taxonomy classify → **adv-*.json** corpus writes (audit only; no auto-apply). [THREAT_LAB.md](docs/THREAT_LAB.md)*
-
-Interactive architecture tabs on **[mcp-guardian-cloud.vercel.app](https://mcp-guardian-cloud.vercel.app/#threat-research)**.
-
-## Proven under attack (v2.10.0)
-
-Evidence is split into four layers — use the right source when quoting numbers:
-
-| Layer | Harness | Trust for CI / procurement |
-|-------|---------|----------------------------|
-| **Repo eval** | `pnpm eval:attack-learning:long` → [`reports/attack-learning-eval/metrics.json`](reports/attack-learning-eval/metrics.json) | **Primary** — reproducible, same code path as `instant-attack-learning` tests |
-| **Adversarial harness** | [`adversarial-harness/run-all.sh`](adversarial-harness/run-all.sh) → [`reports/adversarial-harness/`](reports/adversarial-harness/) | **Primary (live proxy + parity)** — **154/154** corpus attacks, **148/155** evasion (7 tracked bypasses in expanded custom set), **26/26** Node stdio integration; Python offline mirror of TS sync pipeline ([`POLICY_PORT_GAPS.md`](adversarial-harness/python/POLICY_PORT_GAPS.md)) |
-| **Enterprise 5-scenario sim** | [`reports/enterprise-attack-sim/`](reports/enterprise-attack-sim/) (`enterprise-attack-simulator.ts`) | **Synthetic** — 330 modeled attacks, May 2026 package; open [dashboard HTML](reports/enterprise-attack-sim/attack-simulation-dashboard.html) |
-| **180-min SCA sim** | [`sca/`](sca/) (`live-proxy-attack-simulator.ts`, `CHART_*.png`) | **Synthetic** — 349k+ request escalation narrative; not `metrics.json` |
-
-**Enterprise findings (May 2026 sim)** — **17/17** items closed in **2.9.2** ([`reports/enterprise-findings-fixes/summary.md`](reports/enterprise-findings-fixes/summary.md)); original list in [`MCP_GUARDIAN_FINDINGS.md`](reports/enterprise-attack-sim/MCP_GUARDIAN_FINDINGS.md).
-
-**v2.10.0 (enterprise production bundle)** — **shared MCP gateway** (`GUARDIAN_GATEWAY_MODE`, Helm `gateway.*`, [GATEWAY_DEPLOY.md](docs/GATEWAY_DEPLOY.md)); **WebSocket** in ProxyManager; **security swarm hardening** (step timeouts, HMAC evasion manifests); **per-tenant LLM budget** on the hot path; **`@mcp-guardian/core`** Ajv schema validation + offline TR39 confusables / `first…then` chaining; **§6 analysis closure**: semantic rate limit (10/min) + **24h LLM cache**, local semantic on LLM failure, Postgres **RLS** (`GUARDIAN_PG_RLS_ENABLED`), **DPoP lock-free** jti claim, HIPAA/PCI templates, `GET /api/audit`, dashboard SOC2-style access log, policy compile cache, Postgres backup CronJob + DR runbook, Grafana SLO JSON. Gap matrix: [reports/enterprise-mcp-tests-31/gap-matrix.md](reports/enterprise-mcp-tests-31/gap-matrix.md) · readiness: [docs/ENTERPRISE_READINESS.md](docs/ENTERPRISE_READINESS.md).
-
-**v2.9.4 (enterprise multi-tenant hardening)** — unified **response security gate** on all transports (stdio / HTTP / SSE / WebSocket / streamable HTTP), **JWT-bound multi-tenant** dashboard + proxy isolation, **OIDC introspection** + Redis **token revocation**, **audit hash chain**, **mTLS hot-reload**, mock-free **MCP echo fixtures** for integration tests, and CI **Enterprise Preflight** job (Redis + Postgres). Deploy: [docs/ENTERPRISE_DEPLOY.md](docs/ENTERPRISE_DEPLOY.md) · pilot: [docs/MULTI_TENANCY.md](docs/MULTI_TENANCY.md).
-
-**Also on main (2.9.5–2.9.7)** — dashboard **live data only** (no fake zeros); **ThreatIntel** polling; **tenant-scoped** security-swarm at `reports/tenants/{tenantId}/security-swarm/`; **dashboard policy editor** (`PUT /api/policy`); **open-core Pro** licensing; free OSS **cloud control plane** at `apps/cloud` ([docs/SAAS_CONTROL_PLANE.md](docs/SAAS_CONTROL_PLANE.md)); response DLP HTML decode, semantic circuit breaker, enterprise remediation from May 2026 comprehensive analysis.
-
-**M-2 prompt injection** — sync regex path is the default; enable **`GUARDIAN_SEMANTIC_ASYNC`** for tier-2 LLM semantic audit on high-risk deployments ([`docs/AI_LEARNING.md`](docs/AI_LEARNING.md)).
-
-**v2.9.2** leads with **CI-gated adversarial harness** evidence (**154/154** corpus, **148/155** evasion), **four-layer README evidence** (repo eval vs harness vs enterprise sim vs SCA), and **[enterprise attack-sim](reports/enterprise-attack-sim/)** reports; adds the **seamless analysis platform** (solo `pnpm onboard`, dashboard Setup/Agent flow/Analysis tabs, plain-English `report.json`, live infrastructure visuals from `history.db`, personalized traffic summary). Continues per-block instant attack learning, dashboard RBAC, streaming response inspection, and bounded audit queue. See [CHANGELOG.md](CHANGELOG.md).
-
-### Instant vs batch (long-run, repo eval — verified)
-
-`pnpm eval:attack-learning:long` — **5003** simulated blocked `tools/call` events, **~4.9h** attack stream (2–5s inter-arrival, 30s batch debounce).
-
-| Metric | Instant learning | Batch-only (debounced) |
-|--------|------------------|-------------------------|
-| Suggestions queued | 5 | 5 |
-| Avg blocks to first suggestion | **3.0** | **1000.6** |
-| Median time-to-suggestion | **41 s** | **~4.9 h** |
-
-**Verdict:** Same suggestion throughput, but **instant** discovers repeat `(rule, tool)` clusters during the stream; **batch-only** defers until debounce quiet periods (~**428×** slower median discovery: 4.87h ÷ 41s). Deep dive: [Attack learning evaluation](#attack-learning-evaluation) · [summary.md](reports/attack-learning-eval/summary.md) · [docs/AI_LEARNING.md](docs/AI_LEARNING.md).
-
-```mermaid
-flowchart LR
-  B[Policy block] --> I[Instant rolling stats]
-  I --> Q{≥ min blocks in window?}
-  Q -->|yes| S[Queue attack-pattern suggestion]
-  Q -->|no| W[More blocks in stream]
-  B --> D[Debounced batch cycle]
-  D --> S
-  S --> P[Human accept or auto-apply → policy YAML]
-```
-
-### Enterprise five-scenario sim (synthetic — May 2026)
-
-**330** modeled attacks across finance / SaaS / cost / DPoP / healthcare scenarios. Source: [`attack-simulation-metrics.json`](reports/enterprise-attack-sim/attack-simulation-metrics.json) (not CI-gated).
-
-| Scenario | Attacks | Block rate | Avg detection latency |
-|----------|---------|------------|------------------------|
-| A — Credential exfiltration | 80 | 95.0% | 36.2 ms |
-| B — Prompt injection | 100 | 94.0% | 29.9 ms |
-| C — Token amplification | 50 | 88.0% | 47.8 ms |
-| D — DPoP replay | 25 | 88.0% | 70.1 ms |
-| E — SQL injection | 75 | 96.0% | 36.9 ms |
-| **Aggregate** | **330** | **93.33%** (308 blocked) | **38.8 ms** |
-
-**0** false positives in sim · **8.9 MB** peak memory · Interactive charts: [attack-simulation-dashboard.html](reports/enterprise-attack-sim/attack-simulation-dashboard.html). Full index: [reports/enterprise-attack-sim/README.md](reports/enterprise-attack-sim/README.md).
-
-### Adversarial test harness (live proxy + policy parity — May 2026)
-
-Full run: `./adversarial-harness/run-all.sh` or `node adversarial-harness/run-harness.mjs`. Reports: [`reports/adversarial-harness/summary.md`](reports/adversarial-harness/summary.md) · [`analysis.md`](reports/adversarial-harness/analysis.md) · [`results.json`](reports/adversarial-harness/results.json). Harness docs: [`adversarial-harness/README.md`](adversarial-harness/README.md).
-
-| Suite | Result | Notes |
-|-------|--------|-------|
-| **Corpus** (`default-policy.yaml`) | **154/154** attacks blocked · **74/74** benign + edge pass · **0** false positives | **228** fixtures on disk (151 attack + 55 benign + edge-cases under [`corpus/`](corpus/)) |
-| **Evasion probes** | **148/155** blocked · **1** bypass | [`evasion-attacks.json`](adversarial-harness/evasion-attacks.json) — encoding, unicode, SSRF, shell/SQL obfuscation, tool-chain |
-| **Node live integration** | **26/26** passed | Real mock MCP **stdio** + `McpProxyServer` proxy pipeline (not mocked policy) |
-| **Python ↔ TypeScript parity** | **400/402** (99.5%) · **0** corpus mismatches | Python port mirrors TS **sync** `evaluate()` for offline eval; live Node tests use subprocess proxy |
-| **Streaming race** | **3/3** pass | Chunk-boundary injection, concurrent writers, full-response jailbreak (`streaming-inspector`) |
-| **Secret scanner** | **14/14** pass | AWS, GitHub, Slack, Stripe, OpenAI, JWT, npm, generic API keys (live `scanForSecrets`) |
-| **Overall harness** | **PASS** | [`results.json`](reports/adversarial-harness/results.json) (2026-05-20) |
-
-**adv-066** (base64-in-`search`) is blocked in the Node corpus eval path; remaining bypasses are tracked in the expanded 155-probe custom set ([`reports/adversarial-harness/summary.md`](reports/adversarial-harness/summary.md)).
-
-**Proxy concurrency (measured on harness run):**
-
-| Component | p50 | p95 |
-|-----------|-----|-----|
-| `AsyncSerialQueue` (CLI stdin — serializes all lines) | 2.32 ms | 2.41 ms |
-| `McpProxyServer.handleClientInput` (live mock MCP stdio) | 19.37 ms | 37.01 ms |
-
-**Design note:** CLI stdin uses a global **`AsyncSerialQueue`** (one line at a time). The proxy uses **`RequestIdLock`**: same MCP `id` serializes; distinct ids may overlap by design. The Python port is **not** identical to production TypeScript — intentional offline-eval gaps (OPA async, Redis rate limit, FP whitelist, response-body eval, shadow policy) are listed in [`adversarial-harness/python/POLICY_PORT_GAPS.md`](adversarial-harness/python/POLICY_PORT_GAPS.md). Narrative: [analysis.md](reports/adversarial-harness/analysis.md).
-
-```bash
-./adversarial-harness/run-all.sh
-# or
-node adversarial-harness/run-harness.mjs
-pnpm exec tsx adversarial-harness/scripts/compare-node-python.ts   # parity by fixture id
-```
-
-### Security assessment (static review + sim)
-
-May 2026 enterprise package: **8.6/10** production readiness score ([`MCP_GUARDIAN_EXECUTIVE_SUMMARY.md`](reports/enterprise-attack-sim/MCP_GUARDIAN_EXECUTIVE_SUMMARY.md)) — **3 HIGH**, **5 MEDIUM**, **7 LOW** in [`MCP_GUARDIAN_FINDINGS.md`](reports/enterprise-attack-sim/MCP_GUARDIAN_FINDINGS.md). The **comprehensive code analysis** (mcp tests 31) §6–§7 items are tracked in [`gap-matrix.md`](reports/enterprise-mcp-tests-31/gap-matrix.md) — **critical proxy gaps closed in v2.9.7+ / v2.10.0**; formal FIPS/SOC2/FedRAMP certification remains the customer’s compliance program. **No ROI / dollar-value charts** in README.
-
-### Hero charts (repo eval + synthetic sims)
-
-| Instant vs batch — repo eval | Stage 1 → 2 detection — synthetic 180 min sim |
-|:---:|:---:|
-| ![Instant vs batch cumulative suggestions](reports/attack-learning-eval/figures/fig2-cumulative-suggestions.png) | ![Detection accuracy by attack type](sca/CHART_1_Detection_Accuracy.png) |
-
-*Instant curve rises in the first minutes; batch stays flat until ~4.9h debounce quiet — median **~41s** instant vs **~4.87h** batch ([`metrics.json`](reports/attack-learning-eval/metrics.json)).*
-
-*Synthetic [sca/](sca/) sim: Stage 2 detection **+8.8pp** avg vs Stage 1 across 12 escalating attack types.*
-
-```bash
-pnpm eval:attack-learning:long && pnpm eval:attack-learning:charts   # repo fig1–fig7 + metrics.json
-./adversarial-harness/run-all.sh                                       # adversarial harness → reports/adversarial-harness/
-npx tsx reports/enterprise-attack-sim/enterprise-attack-simulator.ts  # refresh enterprise sim JSON
-```
+**[Website](https://mcp-guardian-cloud.vercel.app) · [npm](https://www.npmjs.com/package/@mcp-guardian/server) · [Changelog](CHANGELOG.md)**
 
 ---
 
-MCP Guardian sits between AI agents and MCP servers, enforcing **active security policies**, tracking **real token costs**, monitoring **server health**, and providing **enterprise observability** — all through a YAML-configurable engine with hot-reload.
+## What is it?
 
-It works as a **transparent stdio proxy** (real-time enforcement for Cline, Cursor, Claude Code), a **standalone CLI**, an **interactive TUI**, an **MCP audit server** (agents can self-scan), and a **pnpm monorepo** — install only what you need.
+When you use an AI assistant (like Claude, Cursor, or Cline), it connects to tool servers — things like GitHub, a database, your filesystem, or Slack. These connections use a standard called **MCP (Model Context Protocol)**.
 
-**v3.2.0** ships the **enterprise dashboard redesign** and **strict live-only data policy** (session-gated swarm artifacts, measured insights). **v3.1.0** adds **Threat Lab**, **Auto Threat Research**, and the **Threat Discovery** dashboard tab (Pro + local/cloud LLM). **v3.0.0** adds **enforced Pro licensing** on swarm CLI, fleet, AI learning, and dashboard startup (see [MCP Guardian Pro](#mcp-guardian-pro--499-lifetime-open-core)). **v2.10.0** ships the **enterprise production bundle**: shared **gateway** ingress, **WebSocket** transport parity, swarm hardening, Postgres **RLS** + backup/DR, semantic **10/min** cap with **24h** LLM cache and **local fallback** when the API is exhausted, **DPoP lock-free** jti claims, dashboard **`PUT /api/policy`**, and **`@mcp-guardian/core`** offline confusables. Prior releases: **2.9.7** (live dashboard, policy editor, open-core Pro, cloud control plane), **2.9.4** (multi-tenant JWT + response gate on all transports), **2.9.2** (adversarial harness + enterprise sim), **2.8.0** (production blockers resolved). Full history: [CHANGELOG.md](CHANGELOG.md).
+The problem: there's nothing stopping the AI from making dangerous tool calls, leaking secrets, running commands it shouldn't, or burning through your API budget without you knowing.
 
-> **Experimental vs shipped (honest)**  
-> **Shipped:** stdio proxy + **shared gateway** (SSE/WS), YAML policy + semantic guards, **policy compile cache**, OPA block precedence (lazy when off), dashboard auth (fail-closed) + **RBAC** + **access audit JSONL** (`GET /api/audit`), **browser SPA** with **live-only metrics** and **policy editor**, **ThreatIntel polling**, **tenant-scoped swarm** (HMAC evasion manifests), **response DLP** (HTML/URL decode, `X-Guardian-Redaction-Reason`), **streaming response inspection**, **cost auditor** + `GET /api/cost/breakdown`, **per-tenant daily budget** (`GUARDIAN_TENANT_DAILY_BUDGET_JSON`), TUI + **Fleet tab**, **Redis Sentinel/Cluster HA**, **PgBouncer** + Postgres **RLS**, **Helm PDB / resources / NetworkPolicy** (enterprise overlay), **pg_basebackup** CronJob, bounded **session/nonce/LLM caches** (default **24h** TTL), **DPoP** (lock-free or legacy lock), **audit hash chain** ([HIPAA_AUDIT_TRAIL.md](docs/HIPAA_AUDIT_TRAIL.md)), **@mcp-guardian/core** (Ajv + TR39 offline regex), mTLS, non-root Docker, Plugin SDK, async semantic + **local/Ollama fallback**, secret scanner DLP, corpus + harness, instant/batch AI learning, [gap-matrix](reports/enterprise-mcp-tests-31/gap-matrix.md), Windows `guardian-proxy.ps1`.  
-> **Roadmap:** multi-region **active-active** SQLite/Postgres replication, signed plugin marketplace, production MSI code-signing pipeline.
-
-### Production blockers (v2.8.0 — all resolved)
-
-| # | Blocker | Status |
-|---|---------|--------|
-| 1 | PgBouncer pool exhaustion | **Resolved** — `checkPgBouncerAtStartup`, `GUARDIAN_REQUIRE_PGBOUNCER`, Helm `pgbouncer.requireGuardianEnforcement` |
-| 2 | Memory leak (8h+ IDE sessions) | **Resolved** — LRU `updateAgeOnGet: false`, bounded session cache, `GUARDIAN_MEMORY_MONITOR` |
-| 3 | DPoP multi-replica race | **Resolved** — Redis `SET NX`; **lock-free** jittered retry (`claimDpopJtiLockFree`, default) or legacy lock (`GUARDIAN_DPOP_LOCK_FREE=legacy`) |
-| 4 | Cost auditor audit mode | **Resolved** — default **model-only**; `actual` from proxy; estimates opt-in |
-| 5 | Plugin SDK npm publish | **Resolved** — `@mcp-guardian/plugin-sdk` with `prepublishOnly` build |
-
-Details, verification commands, and Helm defaults: **[docs/PRODUCTION_BLOCKERS.md](docs/PRODUCTION_BLOCKERS.md)**.
-
----
-
-## Table of Contents
-
-- [Security Swarm architecture](#security-swarm-architecture)
-- [Proven under attack (v2.10.0)](#proven-under-attack-v2100)
-  - [Adversarial test harness](#adversarial-test-harness-live-proxy--policy-parity--may-2026)
-- [Production blockers (v2.8.0)](#production-blockers-v280--all-resolved)
-- [Quick Start](#quick-start)
-- [Start here (solo developer)](#start-here-solo-developer)
-- [Dashboard & seamless analysis](#dashboard--seamless-analysis)
-- [Real-World Integration (Cline, Cursor, Claude Code)](#real-world-integration-cline-cursor-claude-code)
-  - [Windows (native PowerShell)](#windows-native-powershell)
-- [Two Operating Modes](#two-operating-modes)
-- [Features](#features)
-- [Installation](#installation)
-- [CLI Reference](#cli-reference)
-- [Policy Engine & Rollout](#policy-engine--rollout)
-- [Interactive TUI](#interactive-tui)
-- [Docker Compose](#docker-compose)
-- [Kubernetes (Helm)](#kubernetes-helm)
-- [Environment Variables](#environment-variables)
-- [Production Checklist](#production-checklist)
-- [Architecture](#architecture)
-- [Attack learning evaluation](#attack-learning-evaluation)
-  - [Repo evaluation (reproducible CI)](#repo-evaluation-reproducible-ci)
-  - [Adversarial test harness](#adversarial-test-harness-live-proxy--policy-parity--may-2026)
-  - [Enterprise five-scenario simulation](#enterprise-five-scenario-simulation-may-2026-package)
-  - [Extended attack simulation (sca collateral)](#extended-attack-simulation-sca-collateral)
-- [Development](#development)
-  - [Performance & benchmarks](#performance--benchmarks)
-- [FAQ](#faq)
-- [Roadmap](#roadmap)
-- [MCP Guardian Pro — pricing & open-core](#mcp-guardian-pro--499-lifetime-open-core)
-- [License](#license)
-
----
-
-## Quick Start
-
-```bash
-# Install globally
-npm install -g @mcp-guardian/server
-
-# Scan all discoverable MCP configs (Cline, Cursor, Claude Desktop, Windsurf)
-mcp-guardian scan --all
-
-# From source (recommended for latest dashboard + onboard)
-git clone https://github.com/rudraneel93/mcp-guardian.git && cd mcp-guardian
-pnpm install && pnpm build
-pnpm onboard -- --client cursor --apply    # or: mcp-guardian wrap --client cline --policy policy-audit.yaml --apply
-# Reload IDE, use MCP tools — traffic flows through Guardian → history.db
-pnpm dashboard:build && pnpm dashboard:proxy   # http://localhost:4000
-
-# Interactive terminal dashboard (same DB)
-mcp-guardian tui
-
-# Full CLI report
-mcp-guardian report --all --format markdown --output guardian-report.md
-```
-
-Solo-developer walkthrough: [Start here (solo developer)](#start-here-solo-developer) · Dashboard: [Dashboard & seamless analysis](#dashboard--seamless-analysis).
-
-**Docker reference stack** (dashboard + Redis + proxy):
-
-```bash
-docker compose up --build
-# Dashboard: http://localhost:4000  |  Metrics: http://localhost:9090/metrics
-```
-
----
-
-## Real-World Integration (Cline, Cursor, Claude Code)
-
-AI clients spawn **one child process per MCP server** and speak JSON-RPC over **stdio**. MCP Guardian becomes that process: the IDE talks to Guardian; Guardian enforces policy and spawns the real upstream server as a child.
+**MCP Guardian** sits in the middle. Every tool call the AI makes passes through Guardian first. Guardian checks it against your rules and either lets it through, blocks it, or flags it for review — before anything happens.
 
 ```
-Cline / Cursor / Claude Code
-        │  stdio JSON-RPC
-        ▼
-  scripts/guardian-proxy.sh  →  node dist/cli.js proxy
-        │  policy + ~/.mcp-guardian/history.db
-        ▼
-  Real MCP server (npx @modelcontextprotocol/…)
+Your AI assistant
+       │
+       ▼
+  MCP Guardian  ◄── checks every call against your rules
+       │
+       ▼
+  Your tool servers (GitHub, filesystem, database...)
 ```
-
-### Critical rule: one Guardian process per MCP server
-
-Wrap **each** server entry individually. Do not point the whole client at one proxy managing five backends (stdin routing is per-process).
-
-| Client | Config path (macOS) |
-|--------|---------------------|
-| Cline (VS Code) | `~/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json` |
-| Cursor / Claude Code | `~/.cursor/mcp.json` |
-| Claude Desktop | `~/Library/Application Support/Claude/claude_desktop_config.json` |
-| Windsurf | `~/.codeium/windsurf/mcp_config.json` |
-
-### One-command wrap
-
-```bash
-# Generate guardian-configs/<server>.json + example patched JSON
-mcp-guardian wrap --client cline --policy policy-audit.yaml
-
-# Patch live client config (creates timestamped .bak backup)
-mcp-guardian wrap --client cline --policy policy-audit.yaml --apply
-
-# Cursor / Claude Code
-mcp-guardian wrap --client cursor --policy policy-warn.yaml --apply
-```
-
-**What wrap does:**
-
-1. Reads your client MCP JSON
-2. Writes upstream definitions to `guardian-configs/<server>.json` (one server each)
-3. Replaces each entry’s `command` with `scripts/guardian-proxy.sh` and `--config` / `--policy` args
-4. Skips `mcp-guardian` meta-server entries by default
-5. Writes `examples/<config>.wrapped.json` for review
-
-### Manual wrap (single server)
-
-`guardian-configs/github.json` holds the **upstream** definition. Client entry:
-
-```json
-"github": {
-  "command": "/absolute/path/mcp-guardian/scripts/guardian-proxy.sh",
-  "args": [
-    "--config", "/absolute/path/mcp-guardian/guardian-configs/github.json",
-    "--policy", "/absolute/path/mcp-guardian/policy-audit.yaml"
-  ],
-  "transport": "stdio"
-}
-```
-
-Use **absolute paths** — Cline’s working directory is unpredictable.
-
-**Cline `env` note:** Cline often does not pass `env` from MCP JSON. Keep secrets in `guardian-configs/*.json`; use `guardian-proxy.sh` for `MCP_GUARDIAN_DB_PATH`, dashboard, and metrics env vars.
-
-### Windows (native PowerShell)
-
-On **win32**, `mcp-guardian wrap` uses `guardian-proxy.ps1` at the repo root and launches it via `powershell.exe -File` so paths like `C:\Users\John Doe\mcp-guardian` work. **WSL2** remains fully supported.
-
-```powershell
-pnpm build
-mcp-guardian wrap --client cursor --policy policy-audit.yaml --apply
-```
-
-See **[docs/WINDOWS.md](docs/WINDOWS.md)** for Cursor example `mcp.json`, better-sqlite3 prebuild notes, and **[installer/windows/](installer/windows/)** for the Inno Setup MSI build (sign before org distribution).
-
-### Policy rollout (production-safe)
-
-| Phase | File | Behavior |
-|-------|------|----------|
-| 1 — observe | `policy-audit.yaml` | Log decisions, no blocks |
-| 2 — alert | `policy-warn.yaml` | Flag violations, still forward |
-| 3 — enforce | `default-policy.yaml` | Active block |
-
-```bash
-mcp-guardian proxy --policy default-policy.yaml --dry-run   # simulate against history DB
-mcp-guardian wrap --client cline --policy default-policy.yaml --apply
-```
-
-Full guide: **[docs/REAL_WORLD_INTEGRATION.md](docs/REAL_WORLD_INTEGRATION.md)**
-
-Verify integration: `./scripts/verify-live-integration.sh`
-
----
-
-## Two Operating Modes
-
-| Mode | How | What it does |
-|------|-----|--------------|
-| **Proxy** | `wrap` / `guardian-proxy.sh` / `mcp-guardian proxy` | Intercepts every `tools/call` for wrapped servers — **use this for Cline** |
-| **MCP audit server** | `"command": "npx", "args": ["-y", "@mcp-guardian/server"]` | Agent can call `scan_security`, `audit_costs`, etc. — does **not** protect other MCP servers |
 
 ---
 
 ## Features
 
-### Security & policy
-- **Fail-closed production default** — `default-policy.yaml` sets `default_action: block` (tools not on the allowlist are blocked). Onboarding uses `policy-demo.yaml` (`default_action: pass`, `mode: audit`) — not for production.
-- **Semantic guards** (sync, before YAML rules) — path guard (expanded credential paths: docker.sock, k8s service-account tokens, `terraform.tfstate`, `.npmrc`, `.git-credentials`, `.vault-token`, service-account JSON), **URL/SSRF guard** (`url-guard.ts`: metadata IPs `169.254.*`, `file://` / `javascript:` / `data:`, private RFC1918, decimal-IP localhost, `[::1]`, webhook/callback fields), SQL/NoSQL/GraphQL/LDAP exfil patterns, SSTI markers (`{{`, `${`, `<%`), GitHub write-tool deny, PowerShell guard, zero-width–stripped prompt-injection in tool **arguments** (`semantic-guards.ts`). See evaluation order in [POLICY.md](docs/POLICY.md).
-- **Puppeteer / browser tools** — `puppeteer_navigate` and `puppeteer_screenshot` scan **all string leaves** for URLs, not only allowlisted tool names; blocks localhost/metadata/private targets while allowing benign public URLs (e.g. `https://example.com/`).
-- **Adversarial regression** — 34 tests in [`tests/policy/adversarial-scenarios.test.ts`](tests/policy/adversarial-scenarios.test.ts) exercise the 58-scenario report against `default-policy.yaml` (no mocks); `tests/policy/url-guard.test.ts` covers URL parsing edge cases. **Comprehensive harness** — 228 corpus fixtures + 155 evasion probes + 26 live Node integration tests ([`adversarial-harness/`](adversarial-harness/), [`reports/adversarial-harness/`](reports/adversarial-harness/)); 7 tracked bypasses in expanded custom set (see [`summary.md`](reports/adversarial-harness/summary.md)).
-- **Honest limits (v2.6.8)** — Security depth improved, but orgs that add custom outbound tools (e.g. `http_request`) must add YAML URL/host rules or keep them off the allowlist. Built-in URL guard keys on `url` / `href` / `target` / `webhook` / `callback` plus full puppeteer argument trees — not every possible argument name.
-- **Unicode / TR39** — `unicode_strict: true` loads `assets/confusables.txt` and folds confusables before policy regex (disable for literal Unicode in i18n teams). **`@mcp-guardian/core`** offline scans use the same TR39 pass + `before…then` / `first…then` chaining (`MCPG-R-090`–`093`)
-- **Three-layer detection** — Regex → schema (Ajv + recursive depth) → optional async LLM semantic audit (not on the hot path); **local semantic** when LLM is rate-limited or unavailable
-- **YAML policy engine** — Allow/deny lists, regex, rate limits, token budgets, RBAC, argument field patterns
-- **Hot-reload** — File watcher builds pending engine off-thread, atomic swap (no “reload in progress” blocks)
-- **OPA/Rego precedence** — OPA **block** > YAML > `default_action`; OPA unavailable falls through to YAML ([POLICY.md](docs/POLICY.md))
-- **`mcp-guardian policy test`** — CLI playground for one `tools/call` without starting the proxy
-- **CVE gate (opt-in)** — `GUARDIAN_BLOCK_ON_CVE=false` by default; when `true`, blocks on scan severity (`GUARDIAN_CVE_BLOCK_SEVERITY`, default `CRITICAL`)
-- **Secret / entropy DLP** — Proxy-time scan on every `tools/call` argument tree and tool **responses**; **150+** industry-standard secret patterns (**267** rules; `getSecretRuleCount()` in `src/scanners/secret-scanner.ts`) covering cloud (AWS, GCP, Azure), VCS/CI (GitHub, GitLab, Bitbucket), payments (Stripe, Square, PayPal), database URLs (postgres, mysql, mongodb, redis, amqp), AI provider keys (OpenAI, Anthropic, HuggingFace, Cohere), webhooks (Slack, Discord), crypto/OAuth, and generic high-entropy assignments; Shannon entropy in `block` mode (`GUARDIAN_PROXY_ENTROPY`)
-- **Response inspection** — Prompt injection and exfiltration in tool **responses**
-- **Detector plugins** — [`@mcp-guardian/plugin-sdk`](https://www.npmjs.com/package/@mcp-guardian/plugin-sdk) (`createDetectorPlugin`, lifecycle hooks); `GUARDIAN_PLUGIN_PATH`; on by default — [PLUGIN_SDK.md](docs/PLUGIN_SDK.md); monorepo: `workspace:*` in `packages/plugin-sdk/`
-- **HTTP tools SSRF template** — `GUARDIAN_HTTP_TOOLS_POLICY=true` merges `policy-templates/http-tools-policy.yaml`
-- **Fleet** — `mcp-guardian fleet status`; TUI Fleet tab; Postgres or `GUARDIAN_FLEET_DB_PATHS`
-- **Dashboard SPA** — `http://localhost:4000/` when proxy runs (`DASHBOARD_ENABLED=true` for REST)
+### 🛡️ Security — blocks dangerous calls before they happen
 
-### Authentication & dashboard
-- **Dashboard auth fail-closed** — When `DASHBOARD_ENABLED=true`, API requests are rejected unless `DASHBOARD_API_KEY` or `DASHBOARD_JWT_SECRET` is set. `DASHBOARD_AUTH_DISABLED=true` is for **local dev only** — do not expose to a network.
-- **CSRF** — Double-submit cookie + `X-CSRF-Token` + Origin/Referer on mutating routes (skipped when auth disabled)
-- **Session regeneration** — Successful login issues a fresh session token (`jti`) and revokes the prior cookie (session fixation mitigation)
-- **OAuth 2.1 / OIDC** — JWT validation with algorithm pinning, audience/issuer checks (proxy path)
-- **DPoP (RFC 9449)** — Sender-constrained tokens; **`jti` replay cache** with Redis `SET NX` — **lock-free jittered retry** by default (`claimDpopJtiLockFree`; set `GUARDIAN_DPOP_LOCK_FREE=legacy` for the short distributed-lock path). Set **`GUARDIAN_REQUIRE_DPOP=true`** + **`REDIS_URL`** in production. **[docs/PRODUCTION_AUTH.md](docs/PRODUCTION_AUTH.md)** · tests: `tests/auth/dpop-lock-free.test.ts`, `tests/auth/dpop-redis-lock.test.ts`.
-- **RBAC** — Scope and client-ID rules in policy YAML
-- **mTLS** — Mutual TLS for proxy ↔ upstream via `MCP_TLS_*` env vars; Helm `mtls.enabled` + `mtls.existingSecret` mounts certs at `/etc/mcp-guardian/tls/` ([PRODUCTION_AUTH.md](docs/PRODUCTION_AUTH.md), [MTLS.md](docs/MTLS.md))
+- **Dangerous command detection** — blocks things like `bash`, `exec`, `curl`, `rm -rf`, and other shell commands the AI should never run
+- **Path protection** — stops the AI from reading sensitive files like `/etc/passwd`, `.ssh/`, `.env`, and Kubernetes secrets
+- **SQL injection prevention** — catches bulk data dumps, `DROP TABLE`, `UNION SELECT`, and other database attacks inside tool arguments
+- **Secret detection** — scans for exposed API keys, tokens, and passwords in tool arguments before they leave your system
+- **URL protection** — blocks SSRF attacks where the AI tries to reach internal services like `localhost`, `169.254.x.x` (cloud metadata), or private IP ranges
+- **Unicode attack detection** — catches invisible characters and lookalike Unicode used to hide malicious instructions
+- **CVE scanning** — checks your MCP server packages against known vulnerability databases
+- **Typo-squat detection** — warns if a package name looks suspiciously similar to a well-known one
 
-### AI learning (honest scope)
-- **Two paths** — **Instant (real-time)** runs synchronously on every proxy policy block: rolling `(rule, tool)` stats, reason n-grams, and `.attack-learning-state.json` updates; queues attack-pattern suggestions after `GUARDIAN_AI_ATTACK_MIN_BLOCKS` repeats within `GUARDIAN_AI_INSTANT_WINDOW_MS`. **Batch (debounced)** runs the full `SuggestionEngine` cycle on a timer or after blocks (`GUARDIAN_AI_BLOCK_DEBOUNCE_MS`, set `0` for immediate). Both write to `.ai-pending-suggestions.json`; YAML apply still requires human accept or `GUARDIAN_AI_AUTO_APPLY=true` (quorum gates self-improvement tuning).
-- **Instant LLM (optional)** — `GUARDIAN_AI_INSTANT_LLM=true` rate-limits a small classifier on critical blocks (`semantic-shell-guard`, `secret-scan`, `path-guard`); metrics `mcp_guardian_instant_learning_events_total`, log `instant_learning_event`. See [AI_LEARNING.md](docs/AI_LEARNING.md).
-- **Anti-poisoning** — Label quorum: `GUARDIAN_AI_MIN_DISTINCT_LABELERS` (default 2) or `GUARDIAN_AI_MIN_TOTAL_LABELS` (default 10); admin label weights; drift detection freezes auto threshold tuning until `GUARDIAN_AI_DRIFT_OVERRIDE=true`
-- **Rollback** — `mcp-guardian ai rollback` and `POST /api/ai/rollback` restore the last learning snapshot; auto-rollback if precision proxy drops >10%
-- **Human accept → policy** — TUI (`a` accept) or dashboard accept writes suggested rules to policy YAML (auto-apply off unless `GUARDIAN_AI_AUTO_APPLY=true`)
-- **Centralized LLM config** — `getLlmConfig()` / `resolveModelId()` in [`src/config/llm-config.ts`](src/config/llm-config.ts) unify provider, model, token cap, timeout, and temperature for semantic scan, Ollama assistant, proxy cost path, and suggestion engine ([AI_LEARNING.md](docs/AI_LEARNING.md))
-- **LLM response cache** — Deduplicates semantic audit prompts across replicas. Default TTL **24h** (`GUARDIAN_LLM_CACHE_TTL_SEC=86400`). Enabled when `REDIS_URL` or `GUARDIAN_LLM_CACHE=true`. Metrics: `mcp_guardian_llm_cache_hits_total` / `misses_total`. [`src/ai/llm-cache.ts`](src/ai/llm-cache.ts)
-- **Semantic LLM rate limit** — `GUARDIAN_SEMANTIC_LLM_MAX_PER_MIN` (default **10**) per tenant; on limit or LLM failure → **local semantic** (not regex-only). Circuit breaker: `src/ai/semantic-circuit-breaker.ts`
-- **Async semantic audit** — Post-hoc LLM queue when `GUARDIAN_SEMANTIC_ASYNC=true` (enterprise Helm default); sync path stays regex + semantic guards
+### 💰 Cost tracking — see exactly what your AI is spending
 
-### Cost governance
-- **Provider-aware token counting** — OpenAI via `tiktoken`; Anthropic via optional `@anthropic-ai/tokenizer` or chars÷3.5; **counts are approximate unless the upstream response includes API `usage`** (`tokenSource: api | estimated`)
-- **Multimodal** — Image tokens `(width × height) / 750` added to tool-call estimates
-- **Live pricing** — litellm-backed model costs (USD only)
-- **Per-tool breakdown** — Tokens, duration, USD for every intercepted call — see [docs/COST_GOVERNANCE.md](docs/COST_GOVERNANCE.md)
-- **Cost auditor honesty (v2.7.11+)** — `costSource` on reports: **`actual`** (proxy `call_records`), **`model-only`** (resolved model + list rates, **$0 measured** — default for `audit`/`report` without proxy traffic), **`estimated`** (legacy tools/list simulation — **opt-in** via `GUARDIAN_COST_ALLOW_ESTIMATES=true`), **`none`**. Model discovery: `resolveModelIdForServer()` ([`src/config/llm-config.ts`](src/config/llm-config.ts)).
-- **Enterprise cost template** — Merge [`policy-templates/enterprise-cost-governance.yaml`](policy-templates/enterprise-cost-governance.yaml) for per-tool **rate limits** (`maxCallsPerMinute`, cluster-wide with Redis) and **token budgets** (`maxTokens`). Guide: [policy-templates/README.md](policy-templates/README.md).
-- **Daily USD budget** — `GUARDIAN_DAILY_BUDGET_USD` (legacy alias `MCP_GUARDIAN_COST_BUDGET`) caps rolling spend via `CostAuditor.getDailySpendUsd()` / `isDailyBudgetExceeded()` on `call_records` since UTC midnight.
+- **Per-call cost tracking** — records the USD cost and token count of every tool call, using real provider rates
+- **Burn rate monitoring** — shows how much you're spending per hour and projects your monthly bill
+- **Budget alerts** — set a daily budget and get alerted when you're getting close
+- **Per-tool breakdown** — see which tools and servers cost the most
+- **Cost history** — view spending over the last 7, 14, or 30 days
 
-### Health & Observability
-- **Live JSON-RPC probes** — Latency, success rate, tool count
-- **Circuit breaker** — CLOSED / OPEN / HALF_OPEN
-- **Prometheus** — `/metrics`, `/healthz`, `/readyz` on port 9090
-- **Web dashboard** — Browser SPA at `http://localhost:4000/` when proxy runs (`deploy/dashboard-spa/`; REST + WebSocket; Setup/Agent flow/Analysis; **live-only** Overview/Audit/Cost/AI panels; plain-English report + infrastructure visuals from `history.db`; ThreatIntel status; `GUARDIAN_DASHBOARD_SPA=false` for legacy HTML)
-- **Interactive TUI** — Terminal dashboard (Overview–Fleet, nine tabs); complements the SPA for SSH-only or headless hosts
-- **OpenTelemetry** — OTLP tracing
-- **SIEM hooks** — Structured JSON (`policy_decision`, `tool_blocked`) via `MCP_GUARDIAN_SIEM_*`
-- **Webhook alerting** — Slack/Discord for policy blocks
+### 📊 Health monitoring — know when something is wrong
 
-### HA & scale
-- **PgBouncer required** — For **>50 replicas** (`REPLICA_COUNT` + `GUARDIAN_STRICT_MODE`) or any multi-replica K8s with `DB_TYPE=postgres`; direct `:5432` exhausts `max_connections` under load. Set `GUARDIAN_REQUIRE_PGBOUNCER=true` to fail startup without a pooler URL (`checkPgBouncerAtStartup` in `src/container.ts`). See [docs/SCALE_AND_RESILIENCE.md](docs/SCALE_AND_RESILIENCE.md) and [docs/PRODUCTION_BLOCKERS.md](docs/PRODUCTION_BLOCKERS.md)
-- **Memory monitor** — Periodic heap/RSS warnings on long-running proxy (`GUARDIAN_MEMORY_MONITOR=false` to disable); pairs with bounded LRU caches (policy engine, session/nonce, LLM/CVE) using `updateAgeOnGet: false` so hot keys cannot pin entries during 8h+ IDE sessions
-- **Session cache limits** — Bounded LRU replaces unbounded `Map` for OAuth/session state (max 10k / 50k with periodic sweep)
-- **Multi-region (active-passive)** — `GUARDIAN_REGION` labels metrics and Redis rate-limit keys; optional `GUARDIAN_RATE_LIMIT_DISTRIBUTED_LOCK`. Not active-active DB replication — see [MULTI_REGION.md](docs/MULTI_REGION.md). Redis locks still assume &lt;80ms RTT within a region.
-- **PostgreSQL backend** — `DB_TYPE=postgres` + `DATABASE_URL` for shared audit store
-- **Redis HA** — Single instance (`REDIS_URL`), **Sentinel** (`REDIS_SENTINELS` + `REDIS_SENTINEL_MASTER_NAME`), or **Cluster** (`REDIS_CLUSTER_NODES`); shared factory in [`src/utils/redis-client.ts`](src/utils/redis-client.ts) backs rate limits, DPoP `jti`, sessions, and LLM cache. Priority: Cluster &gt; Sentinel &gt; URL. See **[docs/REDIS_HA.md](docs/REDIS_HA.md)**; Helm notes in `templates/redis-sentinel-notes.yaml`. Set `GUARDIAN_STRICT_MODE=true` in multi-replica K8s.
+- **Latency tracking** — measures how fast each MCP server responds
+- **Success rate** — tracks how often each server succeeds vs fails
+- **Circuit breaker** — automatically marks a server as unhealthy if it keeps failing
+- **Overload detection** — warns if a server is exposing too many tools (which confuses agents)
+- **Tool inventory** — shows how many tools each server exposes
 
-### IDE, remote & long-running dev
-- **SQLite WAL + busy retry** — Shared `MCP_GUARDIAN_DB_PATH` between proxy and TUI; `persistCallRecord` retries `SQLITE_BUSY` (3× backoff, `busy_timeout=5000`)
-- **Metrics lifecycle** — `shutdownMetrics()` on proxy/TUI/dashboard exit (clears maintenance intervals, closes `:9090`)
-- **Remote SSH path map** — `GUARDIAN_REMOTE_SSH=true` + `GUARDIAN_REMOTE_PATH_MAP` translates local IDE paths for path-guard ([REMOTE_SSH.md](docs/REMOTE_SSH.md))
-- **Dev containers** — Bind-mount the same `history.db`; see [DEVCONTAINERS.md](docs/DEVCONTAINERS.md)
+### 📋 Policy rules — you decide what's allowed
 
-### Enterprise readiness
+- Write rules in plain YAML to control exactly what the AI can and can't do
+- Block specific tools entirely
+- Allow only certain tools (allowlist mode)
+- Match patterns in arguments — e.g. block any SQL that contains `DROP TABLE`
+- Set rate limits — e.g. no more than 120 tool calls per minute
+- Set token budgets — e.g. block calls that would use more than 50,000 tokens
+- Hot-reload rules without restarting anything
 
-See **[docs/ENTERPRISE_READINESS.md](docs/ENTERPRISE_READINESS.md)** for the production vs pilot scorecard. May 2026 **comprehensive analysis** remediation: [gap-matrix.md](reports/enterprise-mcp-tests-31/gap-matrix.md) · [enterprise-analysis-remediation/summary.md](reports/enterprise-analysis-remediation/summary.md).
+### 📡 Live SOC Dashboard — see everything in real time
 
-**Verify before staging / production:**
+A security operations dashboard that shows you everything that's happening:
 
-```bash
-pnpm build
-pnpm test                              # unit + harness (~1054 tests)
-pnpm test:integration                  # 54 tests — real echo HTTP/WS/SSE/stdio fixtures
-GUARDIAN_DISABLE_SEMANTIC=true pnpm verify:corpus   # 154/154 attacks, 74/74 benign
-pnpm enterprise:preflight              # hard checks (needs REDIS_URL + DATABASE_URL in prod)
-pnpm enterprise:pilot                  # multi-tenant dashboard + JWT binding regression
-pnpm enterprise:cutover                # full cutover checklist (build, tests, Helm, migrations)
-pnpm enterprise:compliance-report      # auditor evidence JSON
-```
-
-Helm overlay: [`deploy/helm/mcp-guardian/values-enterprise.yaml`](deploy/helm/mcp-guardian/values-enterprise.yaml) — enables **PDB**, **NetworkPolicy**, **gateway**, `GUARDIAN_PG_RLS_ENABLED`, `GUARDIAN_AUDIT_HASH_CHAIN`, semantic caps, and Postgres backup CronJob. Migrations **004–008** (tenant scoping, indexes, RLS, partitioning index). Ops: [DATABASE_OPERATIONS.md](docs/DATABASE_OPERATIONS.md) · [HIPAA_AUDIT_TRAIL.md](docs/HIPAA_AUDIT_TRAIL.md).
-
-### Cloud control plane (v3.0 MVP)
-
-Optional **cloud control plane** at **`apps/cloud`** — free, open source; does **not** host Guardian proxies.
-
-**Production:** **[mcp-guardian-cloud.vercel.app](https://mcp-guardian-cloud.vercel.app)** — marketing site with problem/solution narrative, Security Swarm + LLM threat research architecture diagrams, competitive USP table, adversarial harness stats, and npm package info ([@mcp-guardian/server](https://www.npmjs.com/package/@mcp-guardian/server), 11k+ downloads/month). **Control plane URL for all Pro buyers:** `https://mcp-guardian-cloud.vercel.app`.
-
-| Flow | Destination |
-|------|-------------|
-| **Sign in (free)** (Google/GitHub) | This repo via `/post-login` → [github.com/rudraneel93/mcp-guardian](https://github.com/rudraneel93/mcp-guardian) |
-| **Cloud console** (`/dashboard`) | Policy editor, tenant env snippet, API keys, optional advanced SSO into a **running** self-hosted Guardian |
-| **Buy Pro** | Lemon Squeezy checkout; webhook auto-registers `GUARDIAN_LICENSE_KEY` |
-
-```bash
-pnpm cloud:dev          # http://localhost:3001
-pnpm cloud:migrate      # requires DATABASE_URL → mcp_guardian_cloud
-pnpm cloud:test
-```
-
-Docs: [SAAS_CONTROL_PLANE.md](docs/SAAS_CONTROL_PLANE.md) · [OAUTH_CLOUD_SETUP.md](docs/OAUTH_CLOUD_SETUP.md) · [CLOUD_VERCEL_DEPLOY.md](docs/CLOUD_VERCEL_DEPLOY.md) · [MONETIZATION.md](docs/MONETIZATION.md) · export bundle: `node scripts/export-tenant-bundle.mjs`
-
-### Enterprise (v2.5+)
-
-#### v2.10.0 production bundle
-- **Shared MCP gateway** — `GUARDIAN_GATEWAY_MODE` / `mcp-guardian proxy --gateway`; Helm `gateway.*` ingress; [GATEWAY_DEPLOY.md](docs/GATEWAY_DEPLOY.md)
-- **WebSocket transport** — `transport: "websocket"` in MCP config; ProxyManager hot-reload
-- **Security swarm** — per-step timeouts, stderr redaction, HMAC-signed evasion manifests (`GUARDIAN_SWARM_EVASION_SIGNING_KEY`)
-- **Per-tenant LLM budget** — `GUARDIAN_TENANT_DAILY_BUDGET_JSON` enforced before async semantic
-- **`@mcp-guardian/core`** — Ajv `MCPG-S-005`, TR39 offline regex (`MCPG-R-092`/`093`), semantic circuit breaker + local fallback
-- **Postgres enterprise ops** — RLS (`006`/`008`), query indexes (`006-query-indexes`), backup CronJob, PgBouncer transaction mode, DR restore runbook
-- **Compliance templates** — [hipaa-compliance.yaml](policy-templates/hipaa-compliance.yaml), [pci-dss-masking.yaml](policy-templates/pci-dss-masking.yaml); immutable audit via `GUARDIAN_AUDIT_HASH_CHAIN`
-- **Observability** — Grafana SLO JSON (`deploy/grafana/mcp-guardian-slo.json`); business metrics (`attacks_blocked`, `cost_spent`, `semantic_audit_skipped`)
-
-#### Earlier enterprise features
-- **Dashboard SPA (v2.7)** — `deploy/dashboard-spa/` served at `/` when the proxy runs with `DASHBOARD_ENABLED=true`; policy FP reject, AI accept/reject, fleet overview; **v2.9.7+** editable policy (`PUT /api/policy`)
-- **Fleet aggregation (v2.7, Pro v3.0+)** — `mcp-guardian fleet status` over Postgres `guardian_instances` or `GUARDIAN_FLEET_DB_PATHS`; TUI **Fleet** tab (key `9`); license required from v3.0
-- **Detector Plugin SDK (v2.8)** — [`@mcp-guardian/plugin-sdk`](https://www.npmjs.com/package/@mcp-guardian/plugin-sdk) on npm (`PLUGIN_SDK_VERSION` 3.2.0); `createDetectorPlugin` + lifecycle hooks; monorepo `workspace:*` — [PLUGIN_SDK.md](docs/PLUGIN_SDK.md), [packages/plugin-sdk/](packages/plugin-sdk/)
-- **Tenant isolation** — per-tenant circuit breakers, rate limits, sessions, attack learning, and audit scoping; JWT-authoritative binding when `GUARDIAN_MULTI_TENANT_ENABLED=true`; see [docs/MULTI_TENANCY.md](docs/MULTI_TENANCY.md)
-- **Response security gate (v2.9.3)** — unified DLP + optional sync semantic on tool **responses** across stdio, HTTP, SSE, WebSocket, and streamable HTTP (`gateToolResponseText`; `GUARDIAN_RESPONSE_DLP_MODE`, `GUARDIAN_SEMANTIC_SYNC_RESPONSE`)
-- **Enterprise auth (v2.9.3)** — OIDC introspection (`GUARDIAN_OIDC_INTROSPECTION`), Redis token revocation denylist, mTLS cert hot-reload (`MtlsCertWatcher`), session rotation (`GUARDIAN_SESSION_ROTATE_ON_USE`)
-- **Audit hash chain (v2.9.3)** — tamper-evident policy audit JSONL (`GUARDIAN_AUDIT_HASH_CHAIN`)
-- **Policy audit trail** — `POLICY_AUDIT_ENABLED` JSONL change log
-- **Compliance pack** — [docs/COMPLIANCE.md](docs/COMPLIANCE.md), [docs/PEN_TEST_SCOPE.md](docs/PEN_TEST_SCOPE.md)
-- **Helm chart** — Redis subchart, ServiceMonitor, ExternalSecrets, **PDB**, **NetworkPolicy** (enterprise), **gateway** service/ingress, Postgres **backup** CronJob, PgBouncer ConfigMap
-- **Docker Compose** — Guardian + Redis reference stack
-- **Supply chain** — `better-sqlite3` **12.10+** (bundled SQLite 3.53.x), `jose` **6.x**, CI `pnpm audit --audit-level=high`, CycloneDX SBOM, cosign on GHCR — [SUPPLY_CHAIN.md](docs/SUPPLY_CHAIN.md)
-- **Non-root Docker** — Production image runs as **`USER 1001`**; [`scripts/verify-docker-prebuilds.sh`](scripts/verify-docker-prebuilds.sh) validates `better-sqlite3` bindings and uid 1001 in docker-publish CI
-
-### Architecture
-- **pnpm monorepo** — `packages/core`, `packages/cli`, `packages/server`, root `src/`
-- **better-sqlite3 12.10+** — WAL mode, primary writer + read-only TUI observers on the same file, migrations, 30-day purge
-- **Pluggable secrets** — env, HashiCorp Vault, AWS Secrets Manager
-- **Graceful shutdown** — WAL checkpoint, connection flush
-
-### Testing
-- **~1054 tests** — `pnpm vitest run` (**165** files; unit, integration, E2E proxy + adversarial proxy + harness node suite, fleet, policy-merge, plugin-sdk, enterprise regressions)
-- **Integration suite** — `pnpm test:integration` (**54** tests) via [`vitest.integration.config.ts`](vitest.integration.config.ts); real MCP echo fixtures under [`tests/fixtures/`](tests/fixtures/) (HTTP, WebSocket, SSE, stdio) — **no mock upstream servers**
-- **Adversarial harness** — `./adversarial-harness/run-all.sh` or `node adversarial-harness/run-harness.mjs` → [`reports/adversarial-harness/`](reports/adversarial-harness/) — **154/154** corpus attacks blocked, **0** FP on **74** benign + edge fixtures, **148/155** evasion blocked (7 tracked bypasses in expanded custom set), **26/26** live Node integration, **400/402** Python/TS parity
-- **Enterprise corpus** — **228** JSON fixtures on disk (151 attack + 55 benign + edge-cases; [`corpus/`](corpus/README.md)); `pnpm eval` via `PolicyEngine` + `default-policy.yaml` — **100%** attack recall on latest eval (see [`corpus-eval-report.json`](corpus-eval-report.json))
-- **Pen-test evidence** — [`docs/PEN_TEST_REPORT.md`](docs/PEN_TEST_REPORT.md), OWASP MCP/LLM mapping in [`security/ATTACK_MATRIX.md`](security/ATTACK_MATRIX.md)
-- **Adversarial scenarios** — 58+ inline regression tests ([`adversarial-scenarios.test.ts`](tests/policy/adversarial-scenarios.test.ts)); **10** corpus attacks through live proxy ([`adversarial-proxy.e2e.test.ts`](tests/e2e/adversarial-proxy.e2e.test.ts)); full matrix in [`adversarial-harness/README.md`](adversarial-harness/README.md)
-- **CI** — `corpus-eval` + `benchmarks` + **`enterprise`** (Redis/Postgres preflight + integration) jobs in [`.github/workflows/ci.yml`](.github/workflows/ci.yml); nightly [`.github/workflows/corpus-eval.yml`](.github/workflows/corpus-eval.yml) uploads `corpus-eval-report.json`
-- **Coverage gates** — 70% lines in CI
+- **Live metrics** — total requests, blocked calls, pass rate, cost — refreshes automatically
+- **Audit log** — every single tool call with its result (blocked or passed), reason, cost, and timestamp
+- **Security posture** — CVE findings, auth status, secrets detected, scores per server
+- **Health panel** — latency, success rates, circuit breaker states
+- **Cost governance** — spending charts, burn rate, projections, budget utilization
+- **Heatmap** — which rules are blocking which tools, visualized as a grid
+- **Policy editor** — edit and save your policy rules from inside the dashboard
+- **Insights** — plain-English summaries of what's happening ("3 servers healthy, GitHub is slow, 2 blocks from path-traversal rule today")
 
 ---
 
-## Start here (solo developer)
+## How it works
 
-One path from zero to a **personalized** plain-English security report on **your** proxied MCP traffic (not synthetic bench data):
+1. You install MCP Guardian
+2. Guardian wraps your existing MCP server configs (it finds them automatically in Cline, Claude Desktop, Cursor, etc.)
+3. Every tool call now goes through Guardian first
+4. Guardian checks the call against your policy rules
+5. If it passes: the call goes to the real server and the response comes back
+6. If it's blocked: the AI gets told the call was denied — nothing reaches the real server
+7. Everything is logged to a local SQLite database
+8. The SOC dashboard reads from that database and shows you live data
 
-```bash
-pnpm install && pnpm build          # root tsc → dist/ (required for dashboard APIs)
-pnpm onboard -- --client cursor --apply
-# Reload Cursor — MCP entries now launch guardian-proxy.sh per server
-# Use MCP tools in the IDE for a few minutes (filesystem, github, etc.)
-pnpm dashboard:build && pnpm dashboard:proxy
-# Browser: http://localhost:4000
-```
+---
 
-| Dashboard tab | What you get |
-|---------------|----------------|
-| **Setup** | Onboarding status, wrapped server registry, quick links to `pnpm onboard` |
-| **Agent flow** | Live WebSocket timeline, analysis pipeline strip, **plain-English report**, **infrastructure visuals** (Recharts), regression details |
-| **Analysis** | Same artifacts as Agent flow — verdict banner, traffic tables, PNG gallery |
-| **Enterprise AI** | LoRA export/train, supply chain, shadow red team, federated hints, tribunal, compliance, **Incident Investigator** (requires `pnpm dashboard:build`) |
-| **Threat Discovery** | Threat Lab workbench, Auto Threat Research, candidate accept/reject |
+## Quick Setup
 
-**Generate / refresh reports:**
+### Install
 
 ```bash
-pnpm security-swarm:analyze              # full pipeline (~2–15 min): traffic + gates + visuals + report.json
-pnpm agent:proxy-traffic                 # quick: 4 benign filesystem calls via Guardian → history.db
-MCP_GUARDIAN_DB_PATH=~/.mcp-guardian/history.db node security-swarm/agents/traffic-summary.mjs
-MCP_GUARDIAN_DB_PATH=~/.mcp-guardian/history.db node security-swarm/agents/plain-english-report.mjs
-```
-
-**Artifacts (dashboard reads these — per tenant):**
-
-| File | Purpose |
-|------|---------|
-| `~/.mcp-guardian/onboard.json` | Last onboard run (client, wrapped servers) |
-| `~/.mcp-guardian/history.db` | All proxied `tools/call` records (source of truth for traffic) |
-| `~/.mcp-guardian/.threat-state.json` | Live ThreatIntel feed state (known attack IDs + timestamps) |
-| `reports/tenants/{tenantId}/security-swarm/report.json` | Plain-English headline + sections (dashboard primary; `default` when single-tenant) |
-| `reports/tenants/{tenantId}/security-swarm/traffic-summary.json` | Per-server calls/blocks/top tools (last 7 days) |
-| `reports/tenants/{tenantId}/security-swarm/visuals-data.json` | Live chart bundle (`history.db` + instant learning) |
-| `reports/tenants/{tenantId}/security-swarm/figures/manifest.json` | Static PNG gallery metadata |
-| `reports/tenants/{tenantId}/security-swarm/analysis.txt` | Technical appendix |
-
-Committed `reports/security-swarm/` is **CI evidence only** — the dashboard does not read it unless `GUARDIAN_SWARM_USE_LEGACY_ARTIFACTS=true` (local dev opt-in).
-
-**Optional:** weekly analysis — `node scripts/security-swarm/schedule-analysis.mjs`
-
-> **Global npm CLI older than repo?** Run onboard from the repo: `pnpm onboard -- --client cursor --apply` (not bare `mcp-guardian onboard` until you publish/install the matching version).
-
-## Installation
-
-```bash
-# Global CLI
 npm install -g @mcp-guardian/server
-
-# As MCP audit server only
-npx @mcp-guardian/server
-
-# From source
-git clone https://github.com/rudraneel93/mcp-guardian.git
-cd mcp-guardian
-pnpm install && pnpm build
 ```
 
-**PostgreSQL (optional):** Default storage is SQLite. For `DB_TYPE=postgres`, install the optional driver: `pnpm add pg` (included as an optional dependency; dynamic import only when PostgreSQL is enabled).
+### Onboard (one command — sets everything up)
+
+```bash
+mcp-guardian onboard
+```
+
+This finds your MCP configs (Cline, Claude Desktop, Cursor, Windsurf), wraps the servers, and sets up Guardian as the proxy. Takes about 30 seconds.
+
+### Or run manually
+
+```bash
+# Start the proxy with the default policy
+mcp-guardian proxy --policy default-policy.yaml
+```
+
+### Open the SOC Dashboard
+
+**Terminal 1 — API backend:**
+```bash
+pnpm soc:api:dev
+```
+
+**Terminal 2 — Dashboard:**
+```bash
+pnpm dashboard:dev
+```
+
+Then open **http://localhost:3000** in your browser.
+
+> The dashboard connects to the live backend automatically and shows real data from your actual traffic.
 
 ---
 
-## CLI Reference
+## The Policy File
 
-### `pnpm onboard` (solo developer, repo root)
-
-Requires `pnpm build` first. See [Dashboard & seamless analysis](#dashboard--seamless-analysis).
-
-```bash
-pnpm onboard -- --client cursor --apply   # wrap + patch IDE config + save ~/.mcp-guardian/onboard.json
-pnpm onboard -- --client auto             # detect IDE, dry-run wrap
-pnpm onboard -- --start-proxy             # print guardian-proxy.sh for first server
-```
-
-### `pnpm agent:proxy-traffic`
-
-Runs benign MCP `tools/call` through a **short-lived Guardian proxy** (official `@modelcontextprotocol/server-filesystem`) so `history.db` gains real proxied rows without reloading the IDE. Client id: `cursor-composer-agent`. Uses `METRICS_ENABLED=false` by default to avoid clashing with `dashboard:proxy` on port 9090.
-
-```bash
-pnpm agent:proxy-traffic
-# then refresh traffic + report:
-node security-swarm/agents/traffic-summary.mjs
-node security-swarm/agents/plain-english-report.mjs
-```
-
-### `mcp-guardian wrap` (new in v2.5)
-
-```bash
-mcp-guardian wrap --client cline              # auto-detect config
-mcp-guardian wrap --client cursor --apply     # patch live ~/.cursor/mcp.json
-mcp-guardian wrap --config ./mcp.json --policy default-policy.yaml
-mcp-guardian wrap --skip github,mcp-guardian  # skip specific servers
-```
-
-### `mcp-guardian scan`
-
-```bash
-mcp-guardian scan --all
-mcp-guardian scan --config ./mcp.json
-mcp-guardian scan --fail-on-critical --fail-on-secrets --threshold-score 60
-```
-
-### `mcp-guardian audit` / `health` / `report`
-
-```bash
-mcp-guardian audit --all --server github
-mcp-guardian health --all --fail-on-overload
-mcp-guardian report --all --format markdown --output report.md
-```
-
-**Cost audit** without proxy traffic defaults to **`model-only`**: resolved model + official list rates, **$0 measured** (`costSource: model-only`). Measured spend requires traffic through `mcp-guardian proxy` (`costSource: actual`). Legacy tools/list simulation is **opt-in**: `GUARDIAN_COST_ALLOW_ESTIMATES=true` (`costSource: estimated`). Model via `resolveModelIdForServer()` — server env, `--model` in args, `GUARDIAN_MODEL_<SERVER>`, `CURSOR_MODEL` / `CLINE_MODEL`, or global `GUARDIAN_LLM_MODEL` / `GUARDIAN_MODEL` ([`src/config/llm-config.ts`](src/config/llm-config.ts)).
-
-### `mcp-guardian proxy`
-
-```bash
-mcp-guardian proxy --config guardian-configs/github.json --policy default-policy.yaml
-mcp-guardian proxy --policy ./policy.yaml --dry-run
-mcp-guardian proxy --auth-issuer https://accounts.google.com --auth-audience my-app
-```
-
-Modes: `audit` | `warn` | `block`. Wrapper script: `scripts/guardian-proxy.sh` (sets DB path, dashboard, metrics).
-
-Per-call sync evaluation stays fast (regex + semantic guards). When `GUARDIAN_LLM_ENABLED` is on, optional **async** LLM review runs post-hoc (`GUARDIAN_SEMANTIC_ASYNC=true`, default) and emits `async_semantic_flag` events without blocking JSON-RPC. Identical LLM prompts are deduplicated via the Redis + LRU cache ([AI_LEARNING.md](docs/AI_LEARNING.md#llm-response-cache-enterprise)).
-
-### `mcp-guardian policy test`
-
-Policy playground — evaluate one `tools/call` without starting the proxy:
-
-```bash
-mcp-guardian policy test \
-  --policy default-policy.yaml \
-  --tool read_file \
-  --args '{"path":"/etc/passwd"}'
-```
-
-Output is JSON: `{ "action", "rule", "reason", "mode" }`.
-
-### `mcp-guardian fleet status`
-
-Aggregate replicas from Postgres (`DATABASE_URL` + `DB_TYPE=postgres`) or multiple SQLite files:
-
-```bash
-export GUARDIAN_FLEET_DB_PATHS="$HOME/.mcp-guardian/history.db,/data/replica-b/history.db"
-mcp-guardian fleet status
-mcp-guardian fleet status --json
-```
-
-### `mcp-guardian ai rollback`
-
-Restore the previous AI learning snapshot (weights/thresholds) after a bad accept cycle or drift:
-
-```bash
-mcp-guardian ai rollback
-```
-
-Equivalent dashboard route: `POST /api/ai/rollback`.
-
-### `mcp-guardian tui`
-
-```bash
-mcp-guardian tui
-mcp-guardian tui --policy default-policy.yaml
-mcp-guardian tui --dashboard-url http://localhost:4000
-```
-
-Keys: `1`–`9` tabs (Overview … Fleet), `Tab` next, `r` refresh, `Esc` quit. AI tab: `n` next suggestion, `a` accept, `x` reject.
-
-Reads **`MCP_GUARDIAN_DB_PATH`** (default `~/.mcp-guardian/history.db`) in **read-only** mode so it can run beside a live proxy. Polls every **1.5s**; connects to **`ws://127.0.0.1:4000/ws`** only when a proxy (or dashboard) is actually listening — otherwise you will see `WS off (poll 1.5s)`, which is normal.
-
----
-
-## Policy Engine & Rollout
-
-Policies are YAML evaluated on every `tools/call`. Pipeline: recursive de-obfuscation → payload normalization (TR39 confusables → NFKC when `unicode_strict: true`) → **semantic guards** (path, SQL exfil, GitHub writes, prompt-injection in args) → semantic shell analysis → YAML rules (regex, tool deny, rate limits, RBAC) → OPA block (if configured) → `default_action`.
-
-**Unicode homoglyphs:** Production policies ship with `unicode_strict: true` and load `assets/confusables.txt` (Unicode TR39) to fold lookalike letters (Greek, Cyrillic, Armenian, mathematical alphanumeric, small caps) before regex matching. Set `unicode_strict: false` in policy YAML for international teams that need literal Unicode in tool arguments. The asset resolves from `dist/` at `../assets/confusables.txt` (~728 KB).
-
-False-positive tuning: reject a block via dashboard `POST /api/policy/fp/reject` with `{ "rule", "pattern" }` (or suggestion reject with `fpReject: true`). After **3** confirmations (`GUARDIAN_FP_WHITELIST_THRESHOLD`), the rule+pattern fingerprint is whitelisted in `~/.mcp-guardian/.fp-whitelist.json`.
+Your rules live in `default-policy.yaml`. Here's a simple example:
 
 ```yaml
-# default-policy.yaml (production — fail-closed)
+version: '1.0'
 policy:
-  mode: block
-  default_action: block   # tools not on allowlist are blocked
-  semantic_shell: true
-  unicode_strict: true   # TR39 confusables before NFKC; false in policy-demo.yaml
+  mode: block           # block anything not explicitly allowed
+  default_action: block
+
   rules:
-    - name: block-shell-injection
-      action: block
-      patterns: [curl\s|wget\s, rm\s+-rf, \$\([^)]+\)]
-    - name: deny-dangerous-tools
+    - name: allow-safe-tools
+      description: Only allow read-only tools
       action: block
       tools:
-        deny: [execute_command, bash, sh, eval]
+        allow:
+          - read_file
+          - list_directory
+          - search
+
+    - name: block-shell-commands
+      description: Never let the AI run shell commands
+      action: block
+      tools:
+        deny:
+          - bash
+          - execute_command
+          - eval
+
+    - name: rate-limit
+      description: Max 60 tool calls per minute
+      action: block
+      maxCallsPerMinute: 60
 ```
 
-| Shipped file | `mode` | `default_action` | Use when |
-|--------------|--------|------------------|----------|
-| `policy-demo.yaml` | audit | pass | Local try-it / onboarding only |
-| `policy-audit.yaml` | audit | pass | First week — observe only |
-| `policy-warn.yaml` | warn | pass | Alert without blocking |
-| `default-policy.yaml` | block | block | Production enforcement |
-
-For a safe first run: `mcp-guardian proxy --policy policy-demo.yaml` (or `policy-audit.yaml`). Switch to `default-policy.yaml` before production.
-
-**Hot-reload:** edit YAML while proxy runs — engine swaps atomically.
-
----
-
-## Dashboard & seamless analysis
-
-The browser SPA (`deploy/dashboard-spa/`) is the default UI at `http://localhost:4000/` when the proxy runs with `DASHBOARD_ENABLED=true`. It is the **solo-developer analysis surface**: onboarding status, live agent timeline, plain-English verdict, personalized traffic, and infrastructure charts fed from **`MCP_GUARDIAN_DB_PATH`** (default `~/.mcp-guardian/history.db`).
-
-### Run locally
-
-```bash
-pnpm build                    # compile dist/ — required after git pull (dashboard APIs live in dist/utils/)
-pnpm dashboard:build          # export Next.js SPA → deploy/dashboard-spa/out/
-pnpm dashboard:proxy          # free :4000, rebuild stale dist if dashboard-server.ts changed, start proxy + SPA
-```
-
-`scripts/start-dashboard-proxy.sh` sets `MCP_GUARDIAN_DB_PATH`, `DASHBOARD_AUTH_DISABLED=true` (local only), `GUARDIAN_WS_ENABLED=true`, auto-picks the first **single-server** config from `guardian-configs/` (default `filesystem.json`), and uses `default-policy.yaml`. Pass config/policy as trailing args; multi-server configs (e.g. `scenarios/real-life/mcp-config.json`) need one proxy per server.
-
-`dashboard:serve` is **SPA-only** (no `call_records`, no `/api/visuals/live`). For real Overview/Audit/Cost/Agent data, always use **`dashboard:proxy`** or `scripts/guardian-proxy.sh` with `DASHBOARD_ENABLED=true`.
-
-### Personalized traffic report
-
-The plain-English headline in `report.json` is driven by **`traffic-summary.json`**, which aggregates **`call_records`** from `history.db` for the last **7 days**:
-
-- **With traffic:** e.g. *"Your MCP setup saw 2813 proxied calls (236 blocked). Industry regression gates passed."*
-- **Without traffic:** regression gates may still pass, but the headline prompts you to *"Use your IDE MCP tools through Guardian to build a personalized traffic report."*
-
-Traffic only exists when MCP clients call **`tools/call` through a Guardian proxy** (`wrap` / `onboard` / `guardian-proxy.sh`). Cursor **built-in agent tools** (Read, Grep, Shell in chat) are **not** MCP — they do not appear in `history.db`.
-
-**Record traffic quickly (no IDE reload):**
-
-```bash
-pnpm agent:proxy-traffic    # spawns proxy + official filesystem MCP; client id cursor-composer-agent
-```
-
-**Refresh report artifacts:**
-
-```bash
-pnpm security-swarm:analyze   # recommended: traffic + user-server probes + swarm gates + visuals + report.json
-# or manual:
-node security-swarm/agents/traffic-summary.mjs
-node security-swarm/agents/plain-english-report.mjs
-```
-
-On the dashboard, click **Refresh report** on Agent flow / Analysis after new traffic.
-
-### Infrastructure visuals (live only)
-
-| Layer | Source | Where |
-|-------|--------|--------|
-| **Interactive charts** | `GET /api/visuals/live` — exports from the proxy's open `history.db` (no per-request open/close) | Agent flow / Analysis → Infrastructure visuals panel (Recharts) |
-| **Static PNGs** | `security-swarm/scripts/generate-swarm-visuals.py` (~19 figures) after analyze | `reports/tenants/{tenantId}/security-swarm/figures/` |
-
-When there is no proxied traffic yet, charts show an empty/unavailable state — not synthetic eval data. Run **`pnpm agent:proxy-traffic`** or use MCP tools through a wrapped proxy first.
-
-```bash
-pnpm security-swarm:visuals-data   # export visuals-data.json only (no full analyze)
-# Python figures (optional .venv-charts):
-.venv-charts/bin/python security-swarm/scripts/generate-swarm-visuals.py
-```
-
-WebSocket `analysis:artifact` events refresh the dashboard when tenant-scoped `traffic-summary.json`, `visuals-data.json`, or `report.json` change during analyze (Agent flow → **Run full security analysis** or `POST /api/security-swarm/run`). Swarm architecture: [docs/assets/security-swarm-architecture.png](docs/assets/security-swarm-architecture.png) (also in [Security Swarm](#security-swarm-ci--runtime-learning-loop) below).
-
-### Dashboard HTTP APIs (local dev)
-
-| Endpoint | Description |
-|----------|-------------|
-| `GET /api/onboarding/status` | Last onboard metadata |
-| `GET /api/servers/registry` | Wrapped / probed servers |
-| `GET /api/security-swarm/traffic-summary` | Personalized traffic JSON (tenant-scoped dir) |
-| `GET /api/security-swarm/report-json` | Plain-English `report.json` (generates if missing) |
-| `GET /api/visuals/live` | Live `visuals-data` bundle from open `history.db` |
-| `GET /api/security-swarm/figures` | PNG manifest + categories |
-| `GET /api/security-swarm/status` | Analysis job state |
-| `POST /api/security-swarm/run` | Start full security analysis (Agent flow button) |
-| `GET /api/ai/threats` | ThreatIntel status (known IDs, last poll) |
-| `POST /api/ai/threats/poll` | Force ThreatIntel feed refresh |
-| `WS /ws` | Live timeline, pipeline, artifact notifications |
-
-### `pnpm onboard` vs global CLI
-
-From **repo root** after `pnpm build`:
-
-```bash
-pnpm onboard -- --client cursor --apply   # wrap servers + patch ~/.cursor/mcp.json + save onboard.json
-pnpm onboard -- --client auto            # detect IDE, dry-run
-pnpm onboard -- --start-proxy             # print guardian-proxy.sh hint for first server
-```
-
-Equivalent: `mcp-guardian wrap --client cursor --apply` when the installed npm package matches the repo version.
-
----
-
-## Interactive TUI
-
-The **browser SPA** is preferred for analysis and visuals; use the **TUI** for SSH-only hosts, quick terminal checks, or when port 4000 is not exposed — both read the same `MCP_GUARDIAN_DB_PATH` and share the Fleet tab / `mcp-guardian fleet status` data.
-
-**One command (local dev):** proxy + dashboard + live metrics from `~/.mcp-guardian/history.db`:
-
-```bash
-pnpm dashboard:build   # first time
-pnpm dashboard:proxy   # stops processes on :4000, starts proxy + SPA
-```
-
-**Agent flow tab (SPA):** Live WebSocket timeline (MCP allow/block, semantic audit, AI suggestions), horizontal **analysis pipeline** when you run security analysis, plain-English report, and infrastructure charts. Each proxied `tools/call` should appear within ~1s. REST polling for other tabs falls back every 30s if WS is disconnected. Uncheck **Auto-scroll** on the timeline if you prefer a fixed scroll position.
-
-```bash
-pnpm run build
-mcp-guardian doctor --policy default-policy.yaml   # DB path, policy, AI flags
-
-# Terminal 1 — at least one wrapped proxy (or echo-test) writing history.db
-mcp-guardian proxy --config mcp.json --policy default-policy.yaml
-
-# Terminal 2 — dashboard (same DB, read-only)
-pnpm run tui
-```
-
-### What the TUI shows (honestly)
-
-| Tab | Source | Caveats |
-|-----|--------|---------|
-| Overview / Audit | `call_records` in SQLite | **Real data** from proxied `tools/call` only. No traffic → zeros. |
-| Security | Latest `security_scans` per server | Scans can score **0/100** when CVE data is harsh — that is not “mock,” it is scan output. |
-| Cost | Token fields on call records | **$0** until calls carry priced models/tokens. |
-| Instances | One row per **MCP server name** in DB | Not “Guardian processes.” `echo-test` with scans but **no calls** still appears; **Servers w/ traffic** counts servers with `call_records` only. |
-| Fleet (key `9`) | `getFleetStatus()` — Postgres or `GUARDIAN_FLEET_DB_PATHS` | Same data as `mcp-guardian fleet status`; aggregate replicas, not live host discovery. |
-| AI Engine | Learning cycle + pending suggestions | **No fake TP/FP rates** until ≥5 labeled accept/reject outcomes. Suggestions can be **empty** on stable traffic (no anomalies). |
-| FULL ANALYSIS | Rebuilt from DB when records exist | Ignores stale `~/.mcp-guardian/.ai-report.json` when live calls are present. |
-
-### Live updates — what actually works
-
-1. **Same database file.** TUI and proxy must use the **same** `MCP_GUARDIAN_DB_PATH`. If you see counts stuck at 21 while a script runs, check the demo/proxy log: it must say `history.db`, not `history-<pid>-<timestamp>.db`.
-2. **WebSocket (fastest).** Start the proxy first (`GUARDIAN_WS_ENABLED=true` by default). TUI status should show **`WS live`**. Port **4000** must be free; otherwise the proxy runs without WS and the TUI polls only.
-3. **Polling (fallback).** Read-only reopen every 1.5s picks up WAL commits from the proxy. Good enough for local dev; not a replacement for a shared Postgres tier in production.
-
-### Multi-server traffic (local demo)
-
-The stdio proxy handles **one MCP server per process**. Four servers in the wild means **four wrapped proxies** (or `wrap`), all pointing at the same `MCP_GUARDIAN_DB_PATH`.
-
-For a **single-machine smoke test** without editing four configs:
-
-```bash
-# Terminal 1
-pnpm run tui
-
-# Terminal 2 — replays 21 corpus calls (pass + block) into the SAME history.db
-pnpm run live:tui-demo                        # stream: ~1 call / 1.5s (watch counts climb)
-node scripts/run-live-tui-demo.cjs            # one-shot burst (all 21 calls quickly)
-```
-
-This uses in-process proxies + `scenarios/dogfood/enterprise-mcp-stub.cjs` — **not** your real GitHub/Postgres MCP binaries. It proves policy + DB + TUI wiring; it does not prove your production MCP servers.
-
-```bash
-pnpm run dogfood    # sandboxed CI scenario (separate DB under scenarios/dogfood/sandbox)
-```
-
-**Do not** use `scripts/real-life-tui-prep.cjs` for “live” demos — it used to seed fake AI JSON; that seeding was removed. Prefer `live:tui-demo` or real proxy traffic.
-
-### Limitations (read this before demoing to leadership)
-
-- **Fleet view is aggregate-only.** `mcp-guardian fleet status` and the TUI Fleet tab read Postgres `guardian_instances` or comma-separated SQLite paths — not live discovery of remote hosts.
-- **“6 inst” ≠ 6 live proxies.** The status bar counts **server names** known to the DB (calls + scans). Only **Servers w/ traffic** reflects tool calls.
-- **WS off** is common if nothing listens on `:4000` or an old process holds the port — fix by stopping stray `node dist/cli.js proxy` processes, not by assuming the TUI is broken.
-- **Learning while TUI is open** does not write to the DB (read-only). Run learning on the proxy process or restart TUI after `GUARDIAN_TUI_SKIP_LEARNING=true` if you only want display.
-- **Docker:** bind-mount the same `history.db` into the container and the host TUI, or you will see different numbers on each side.
-
----
-
-## Docker Compose
-
-```bash
-docker compose up --build
-```
-
-| Service | Port | Notes |
-|---------|------|-------|
-| mcp-guardian | 4000, 9090 | Proxy + dashboard + metrics |
-| redis | 6379 | Rate-limit/session backing |
-
-Volumes: `guardian-data` → `/data/history.db`. Config: `./mcp.json`, `./default-policy.yaml`. Image runs as **non-root uid 1001** (`USER 1001` in Dockerfile); entrypoint fixes volume permissions for `appuser`. CI runs [`scripts/verify-docker-prebuilds.sh`](scripts/verify-docker-prebuilds.sh) on publish.
-
-**IDE note:** Cline on the host should use local `wrap` + `guardian-proxy.sh`, not stdio into the container. Use Compose for team demos, CI, and central observability.
-
----
-
-## Kubernetes (Helm)
-
-```bash
-# Developer / single-replica
-helm install guardian ./deploy/helm/mcp-guardian \
-  -f deploy/helm/mcp-guardian/examples/developer-cline-values.yaml
-
-# Enterprise production (3+ replicas, gateway, RLS, backups)
-helm upgrade --install mcp-guardian ./deploy/helm/mcp-guardian \
-  -f deploy/helm/mcp-guardian/values.yaml \
-  -f deploy/helm/mcp-guardian/values-enterprise.yaml
-```
-
-Includes: Redis subchart, ServiceMonitor, ExternalSecrets, **PDB**, **NetworkPolicy** (enterprise), **gateway** ingress/service, Postgres **backup** CronJob, PgBouncer ConfigMap, `fsGroup: 1001`, `/readyz` probes, optional **`mtls.enabled`**, **`GUARDIAN_REQUIRE_DPOP`**, and `templates/redis-sentinel-notes.yaml` for external Sentinel. See [ENTERPRISE_DEPLOY.md](docs/ENTERPRISE_DEPLOY.md) and [GATEWAY_DEPLOY.md](docs/GATEWAY_DEPLOY.md).
-
-```bash
-# Team example values
-deploy/helm/mcp-guardian/examples/developer-cline-values.yaml
-```
-
-See [deploy/PRODUCTION.md](deploy/PRODUCTION.md) for scaling and [docs/SCALE_AND_RESILIENCE.md](docs/SCALE_AND_RESILIENCE.md) for HA chaos-test results (PgBouncer required, cross-region limits).
-
-```bash
-docker run -v $(pwd)/mcp.json:/etc/mcp-guardian/mcp.json \
-  -v $(pwd)/default-policy.yaml:/etc/mcp-guardian/policy.yaml \
-  ghcr.io/rudraneel93/mcp-guardian:latest \
-  proxy --config /etc/mcp-guardian/mcp.json --policy /etc/mcp-guardian/policy.yaml
-```
+The default policy already blocks ~300 known attack patterns. You can extend it or write your own from scratch.
 
 ---
 
 ## Environment Variables
 
-Grouped by concern. Full behavior: linked docs and `src/` defaults.
+You only need these if you want to override defaults:
 
-### Policy & detection
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `OPA_URL` | — | OPA decision endpoint (block wins over YAML) |
-| `GUARDIAN_WORKSPACE` | — | Restrict filesystem tool paths to this directory |
-| `GUARDIAN_ALLOWED_PATH_PREFIXES` | — | Comma-separated path prefixes |
-| `GUARDIAN_GITHUB_ALLOWED_ORGS` | — | Allowed GitHub orgs for `repo` arguments |
-| `GUARDIAN_GITHUB_ALLOWED_REPOS` | — | Exact `org/repo` allowlist |
-| `GUARDIAN_PROXY_ENTROPY` | on in `block` | Block high-entropy / base64 in arguments |
-| `GUARDIAN_BLOCK_ON_CVE` | `false` | Opt-in CVE gate on `tools/call` |
-| `GUARDIAN_CVE_BLOCK_SEVERITY` | `CRITICAL` | `HIGH` widens blocking when gate on |
-| `GUARDIAN_PLUGINS_ENABLED` | on | Detector plugins (`false` to disable) |
-| `GUARDIAN_PLUGIN_PATH` | — | Directory of `*.js` plugins |
-| `GUARDIAN_HTTP_TOOLS_POLICY` | `false` | Merge `policy-templates/http-tools-policy.yaml` |
-| `GUARDIAN_HTTP_TOOLS_POLICY_PATH` | — | Override template path |
-| `GUARDIAN_SEMANTIC_ASYNC` | on w/ LLM | Post-hoc LLM audit (non-blocking); **on** in enterprise Helm |
-| `GUARDIAN_SEMANTIC_LLM_MAX_PER_MIN` | `10` | Per-tenant LLM calls/minute (rate limit → local semantic) |
-| `GUARDIAN_SEMANTIC_DEBOUNCE_MS` | `500` | Async semantic queue debounce |
-| `GUARDIAN_SEMANTIC_ASYNC_MAX_QUEUE` | `200` | Max queued async audits |
-| `GUARDIAN_TENANT_DAILY_BUDGET_JSON` | — | Per-tenant USD caps before semantic LLM, e.g. `{"acme":50}` |
-| `GUARDIAN_GATEWAY_MODE` | `false` | Shared SSE/WS gateway (no stdio children) |
-| `GUARDIAN_SEMANTIC_MIN_CONFIDENCE` | `0.6` | Flag threshold for async semantic |
-| `GUARDIAN_SEMANTIC_SYNC_RESPONSE` | `false` | Sync semantic gate on tool **responses** (stdio/SSE/WS) |
-| `GUARDIAN_SEMANTIC_SYNC_RESPONSE_LLM` | `false` | LLM tier for sync response gate (adds latency) |
-| `GUARDIAN_SEMANTIC_SYNC_TIMEOUT_MS` | `3000` | Sync response LLM timeout (ms) |
-| `GUARDIAN_REGION` | `default` | Region label for metrics/Redis keys |
-| `GUARDIAN_RATE_LIMIT_DISTRIBUTED_LOCK` | `false` | Redis NX window lock (active-passive) |
-| `GUARDIAN_FLEET_DB_PATHS` | — | Comma-separated SQLite paths for fleet CLI/TUI |
-| `GUARDIAN_DASHBOARD_SPA` | on | Serve `deploy/dashboard-spa/` at `/` |
-| `GUARDIAN_SWARM_USE_LEGACY_ARTIFACTS` | `false` | When `true`, `default` tenant may read committed `reports/security-swarm/` |
-| `GUARDIAN_FP_WHITELIST_THRESHOLD` | `3` | FP confirmations before auto-whitelist |
-| `GUARDIAN_FP_WHITELIST_PATH` | `~/.mcp-guardian/.fp-whitelist.json` | FP whitelist file |
-| `POLICY_AUDIT_ENABLED` | `false` | Policy change JSONL audit |
-| `GUARDIAN_DISALLOW_MODE_OVERRIDE` | `false` | Ignore CLI `--blocking-mode` when `true` |
-
-**URL guard (v2.6.8):** No dedicated env vars — runs inside semantic guards on every `tools/call`. Restrict filesystem access with `GUARDIAN_WORKSPACE` / `GUARDIAN_ALLOWED_PATH_PREFIXES` above.
-
-### Auth & dashboard
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DASHBOARD_ENABLED` | `false` | REST + WebSocket API on port 4000 |
-| `DASHBOARD_AUTH_DISABLED` | `false` | `true` = local dev only (no auth) |
-| `DASHBOARD_API_KEY` | — | API key / login shortcut when auth on |
-| `DASHBOARD_JWT_SECRET` | — | HMAC session tokens |
-| `DASHBOARD_USERNAME` / `DASHBOARD_PASSWORD` | — | Dashboard login |
-| `DASHBOARD_ALLOWED_ORIGINS` | localhost | CORS allowlist |
-| `GUARDIAN_TENANT_ID` | `default` | Default tenant when no `X-Guardian-Tenant` / `X-Tenant-Id` header |
-| `GUARDIAN_MULTI_TENANT_ENABLED` | `false` | Shared gateway mode — clients send tenant headers |
-| `GUARDIAN_REQUIRE_DPOP` | `false` | Reject requests without valid DPoP proof (RFC 9449); **on** in enterprise Helm |
-| `GUARDIAN_DPOP_LOCK_FREE` | on (not `legacy`) | Jittered `SET NX` jti claim; `legacy` = short distributed lock |
-| `GUARDIAN_AUDIT_HASH_CHAIN` | `false` | Tamper-evident SIEM JSONL (`prev_hash` / `record_hash`) |
-| `GUARDIAN_AUDIT_HASH_CHAIN_SIEM` | on w/ chain | Write chained events to SIEM log file |
-| `GUARDIAN_OIDC_INTROSPECTION` | `false` | RFC 7662 token introspection after JWT validation |
-| `GUARDIAN_OIDC_INTROSPECTION_FAIL_OPEN` | `false` | `true` = skip deny when introspection errors |
-| `GUARDIAN_OIDC_CLIENT_ID` | — | OAuth client id for introspection |
-| `GUARDIAN_OIDC_CLIENT_SECRET` | — | OAuth client secret for introspection |
-| `GUARDIAN_TOKEN_REVOCATION_REDIS` | on w/ Redis | Cluster-wide revoked-token denylist |
-| `GUARDIAN_TOKEN_REVOCATION_TTL_MS` | `86400000` | Revoked token entry TTL (ms) |
-| `MCP_TLS_ENABLED` | `false` | Enable client cert to upstream MCP |
-| `GUARDIAN_MTLS_HOT_RELOAD` | on w/ mTLS | `false` = disable cert filesystem watcher |
-| `MCP_TLS_CA` | — | CA bundle to verify upstream |
-| `MCP_TLS_CERT` | — | Proxy client certificate |
-| `MCP_TLS_KEY` | — | Proxy client private key |
-| `MCP_TLS_REJECT_UNAUTHORIZED` | `true` | `false` only in lab |
-
-### AI learning
-
-Full LLM cache and config reference: [AI_LEARNING.md](docs/AI_LEARNING.md) · implementation in [`src/config/llm-config.ts`](src/config/llm-config.ts) and [`src/ai/llm-cache.ts`](src/ai/llm-cache.ts).
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `GUARDIAN_AI_ENABLED` | `true` | Learning in proxy/TUI (`false` to disable) |
-| `GUARDIAN_AI_AUTO_APPLY` | `false` | Auto-apply generated rules (`true` = risky) |
-| `GUARDIAN_AI_ON_CLI` | `false` | Learning on `scan`/`audit`/`health`/`report` |
-| `GUARDIAN_AI_BLOCK_DEBOUNCE_MS` | `30000` | Debounce full learning cycle after blocks (`0` = immediate) |
-| `GUARDIAN_AI_INSTANT_LEARNING` | on | Per-block sync stats + instant suggestion queue |
-| `GUARDIAN_AI_INSTANT_WINDOW_MS` | `300000` | Sliding window for repeat (rule, tool) blocks |
-| `GUARDIAN_AI_INSTANT_LLM` | `false` | LLM classifier on critical blocks (rate-limited) |
-| `GUARDIAN_AI_INSTANT_LLM_RATE_MS` | `60000` | Global instant-LLM rate limit |
-| `GUARDIAN_AI_ATTACK_STATE_PATH` | `~/.mcp-guardian/.attack-learning-state.json` | Instant learning state |
-| `GUARDIAN_AI_ATTACK_MIN_BLOCKS` | `3` | Min blocks before attack suggestions |
-| `GUARDIAN_AI_MIN_DISTINCT_LABELERS` | `2` | Quorum: distinct labelers |
-| `GUARDIAN_AI_MIN_TOTAL_LABELS` | `10` | Quorum: weighted label total |
-| `GUARDIAN_AI_DRIFT_OVERRIDE` | `false` | Unfreeze tuning after drift detection |
-| `GUARDIAN_TUI_USER` | `$USER` | Label identity for quorum |
-| `ANTHROPIC_API_KEY` | — | Anthropic API key (semantic layer) |
-| `OPENAI_API_KEY` | — | OpenAI API key (when `GUARDIAN_LLM_PROVIDER=openai`) |
-| `GUARDIAN_LLM_PROVIDER` | auto from keys | `anthropic` \| `openai` \| `ollama` (explicit override) |
-| `GUARDIAN_LLM_MODEL` | provider default | Model id for semantic scan + Ollama assistant |
-| `GUARDIAN_LLM_MAX_TOKENS` | `512` | `max_tokens` / `num_predict` cap |
-| `GUARDIAN_LLM_TIMEOUT_MS` | `30000` | LLM HTTP timeout (ms) |
-| `GUARDIAN_LLM_TEMPERATURE` | `0.1` | Sampling temperature (included in cache key) |
-| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama API base (`OLLAMA_URL` alias) |
-| `GUARDIAN_LLM_CACHE` | on w/ `REDIS_URL` | `true` / `false` to force; otherwise on when `REDIS_URL` set. Redis + in-process LRU (500 entries); metrics `mcp_guardian_llm_cache_hits_total` / `mcp_guardian_llm_cache_misses_total` |
-| `GUARDIAN_LLM_CACHE_TTL_SEC` | `86400` | Redis + LRU entry TTL (seconds); **24h** default |
-| `GUARDIAN_LOCAL_SEMANTIC` | on | Heuristic semantic when LLM absent or rate-limited |
-
-### Cost & observability
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `METRICS_ENABLED` | `false` | Prometheus on 9090 |
-| `METRICS_MAINTENANCE_INTERVAL_MS` | `60000` | Registry refresh (cleared on shutdown) |
-| `MCP_GUARDIAN_SIEM_*` | — | SIEM export |
-| `ALERT_WEBHOOK_URL` | — | Slack/Discord on policy blocks |
-| `NVD_API_KEY` | — | NVD CVE lookups |
-| `GUARDIAN_DAILY_BUDGET_USD` | — | Daily USD spend cap (`CostAuditor`, UTC midnight) |
-| `MCP_GUARDIAN_COST_BUDGET` | — | Legacy alias for `GUARDIAN_DAILY_BUDGET_USD` |
-| `GUARDIAN_COST_ALLOW_ESTIMATES` | `false` | `true` = legacy tools/list cost simulation (`costSource: estimated`) |
-
-### HA & database
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `MCP_GUARDIAN_DB_PATH` | `~/.mcp-guardian/history.db` | SQLite path |
-| `DB_TYPE` | `sqlite` | `postgres` for shared store |
-| `DATABASE_URL` | — | Postgres URL; **use PgBouncer** for multi-replica |
-| `GUARDIAN_REQUIRE_PGBOUNCER` | `false` | Exit if `DATABASE_URL` is not pooler-shaped (hostname `pgbouncer` or port `6432`) |
-| `REPLICA_COUNT` | `1` | Replica count for PgBouncer strict-mode check (`GUARDIAN_STRICT_MODE` + `>50` + direct `:5432` → fail startup) |
-| `GUARDIAN_MEMORY_MONITOR` | on | `false` disables periodic heap/RSS warnings on proxy |
-| `GUARDIAN_PG_POOL_MAX` | `10` | Postgres pool max per replica (Helm sets `4` with PgBouncer) |
-| `GUARDIAN_PG_RLS_ENABLED` | `false` | Row-level security via `app.tenant_id` session var |
-| `GUARDIAN_DASHBOARD_QUERY_CACHE` | on w/ Redis | TTL cache for `GET /api/cost/breakdown` |
-| `REDIS_URL` | — | Single Redis instance (multi-replica rate limits, DPoP jti, LLM cache) |
-| `REDIS_SENTINELS` | — | Comma-separated `host:port` Sentinel endpoints |
-| `REDIS_SENTINEL_MASTER_NAME` | `mymaster` | Sentinel master name |
-| `REDIS_CLUSTER_NODES` | — | Comma-separated `host:port` Cluster nodes |
-| `REDIS_PASSWORD` | — | Redis auth (all modes) |
-| `GUARDIAN_STRICT_MODE` | `false` | Fail startup without Redis in K8s / multi-replica |
-| `GUARDIAN_AUDIT_SYNC_ENABLED` | `false` | Sync SQLite → PostgreSQL |
-
-### Windows
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| *(none required)* | — | Use `guardian-proxy.ps1` via `wrap` on win32; see [WINDOWS.md](docs/WINDOWS.md) |
-
-### IDE & remote
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `GUARDIAN_REMOTE_SSH` | `false` | Map local paths for path-guard |
-| `GUARDIAN_REMOTE_PATH_MAP` | — | JSON or `local=/remote` pairs |
-| `GUARDIAN_WS_ENABLED` | `true` (proxy) | WebSocket `/ws` for TUI |
-| `GUARDIAN_DASHBOARD_URL` | `http://127.0.0.1:4000` | TUI WS + API base |
-| `GUARDIAN_TUI_SKIP_LEARNING` | `false` | TUI display-only |
-| `GUARDIAN_SKIP_PREFLIGHT_SCAN` | `false` | Skip CVE scan on proxy start |
+| Variable | What it does |
+|---|---|
+| `MCP_GUARDIAN_POLICY` | Path to your policy YAML file |
+| `MCP_GUARDIAN_DB_PATH` | Where to save the call history database |
+| `GUARDIAN_DAILY_BUDGET_USD` | Set a daily cost budget (triggers alerts) |
+| `SOC_API_PORT` | Port for the dashboard API backend (default: 4040) |
+| `ANTHROPIC_API_KEY` | Required for AI-powered features (semantic audit, threat lab) |
 
 ---
 
-## Production Checklist
+## What's in the box
 
-**Ops:** [Disaster recovery runbook](docs/DISASTER_RECOVERY.md) · [Encryption at rest](docs/ENCRYPTION_AT_REST.md) · [Redis HA](docs/REDIS_HA.md)
-
-Short list before `default-policy.yaml` + block mode in production. Production blockers are resolved in **v2.8.0+** ([docs/PRODUCTION_BLOCKERS.md](docs/PRODUCTION_BLOCKERS.md)). Enterprise overlay: [values-enterprise.yaml](deploy/helm/mcp-guardian/values-enterprise.yaml) · [ENTERPRISE_DEPLOY.md](docs/ENTERPRISE_DEPLOY.md).
-
-1. **Policy** — Roll out `policy-audit.yaml` → `policy-warn.yaml` → `default-policy.yaml`; run `mcp-guardian policy test` on risky tools; set `GUARDIAN_WORKSPACE` or path prefixes ([POLICY.md](docs/POLICY.md)).
-2. **SSRF / browser tools** — Default policy blocks metadata IPs, dangerous schemes, and private/localhost URLs in `url`/`href`/`webhook`/`callback`; puppeteer tools get full-argument URL scan. If you add `http_request` or similar, add explicit YAML host/URL rules — allowlist alone is not enough.
-3. **Credential paths** — Semantic path guard blocks docker.sock, k8s tokens, terraform state, `.npmrc`, `.git-credentials`, `.vault-token`, and service-account JSON patterns; scope writes with `GUARDIAN_WORKSPACE`.
-4. **Auth** — `DASHBOARD_AUTH_DISABLED` must be **false** on any exposed dashboard; set `DASHBOARD_API_KEY` or JWT secret + credentials; production OAuth + `GUARDIAN_REQUIRE_DPOP=true` + **`REDIS_URL`** (or Sentinel/Cluster) for jti dedup — [PRODUCTION_AUTH.md](docs/PRODUCTION_AUTH.md).
-5. **HA / PgBouncer** — `DATABASE_URL` through **PgBouncer** (not direct `:5432`) for multi-replica Postgres; `GUARDIAN_REQUIRE_PGBOUNCER=true`, `REPLICA_COUNT`, `GUARDIAN_STRICT_MODE=true`; Helm `pgbouncer.requireGuardianEnforcement: true` — [SCALE_AND_RESILIENCE.md](docs/SCALE_AND_RESILIENCE.md).
-6. **Redis** — `REDIS_URL` or Sentinel/Cluster ([REDIS_HA.md](docs/REDIS_HA.md)) for rate limits, DPoP, sessions, LLM cache; single-region only.
-7. **Memory** — Leave `GUARDIAN_MEMORY_MONITOR` on for long-running proxies; bounded LRU caches are default (no unbounded session maps).
-8. **Cost** — Merge `policy-templates/enterprise-cost-governance.yaml`; set `GUARDIAN_DAILY_BUDGET_USD`; do **not** set `GUARDIAN_COST_ALLOW_ESTIMATES` unless you need legacy simulation — default audit is **model-only** ($0 measured without proxy traffic).
-9. **CVE** — Decide explicitly: `GUARDIAN_BLOCK_ON_CVE=true` or leave off (default).
-10. **AI** — Keep `GUARDIAN_AI_AUTO_APPLY=false`; configure quorum env vars if multiple operators label suggestions.
-11. **Verify** — `pnpm build && pnpm test`; `pnpm enterprise:preflight` (Redis + Postgres in staging); `pnpm eval`; `./adversarial-harness/run-all.sh`; `mcp-guardian doctor`, `mcp-guardian proxy --dry-run`.
-12. **Enterprise DB** — Postgres migrations **004–008**; `GUARDIAN_PG_RLS_ENABLED=true` for tenant isolation; [DATABASE_OPERATIONS.md](docs/DATABASE_OPERATIONS.md) for backups/restore.
-13. **Semantic** — `GUARDIAN_SEMANTIC_ASYNC=true` + `GUARDIAN_SEMANTIC_LLM_MAX_PER_MIN=10` + `GUARDIAN_LOCAL_SEMANTIC=true`; `GUARDIAN_LLM_CACHE_TTL_SEC=86400` when using Redis.
-14. **Fleet** — Postgres `guardian_instances` or `GUARDIAN_FLEET_DB_PATHS` for `mcp-guardian fleet status` / TUI Fleet tab (aggregate only).
-15. **Plugins** — Use published `@mcp-guardian/plugin-sdk`; audit `GUARDIAN_PLUGIN_PATH`; `GUARDIAN_PLUGINS_ENABLED=false` on hosts that must not load third-party detectors.
-16. **HTTP tools** — `GUARDIAN_HTTP_TOOLS_POLICY=true` when MCP servers expose outbound HTTP tools.
-17. **Dashboard SPA** — `DASHBOARD_ENABLED=true` with auth credentials; `GUARDIAN_AUDIT_HASH_CHAIN=true` for SOC2-style access logs.
-18. **mTLS** — `MCP_TLS_*` + Helm `mtls.enabled` ([PRODUCTION_AUTH.md](docs/PRODUCTION_AUTH.md)).
-19. **Gateway** — `GUARDIAN_GATEWAY_MODE=true` for shared SSE/WS ingress ([GATEWAY_DEPLOY.md](docs/GATEWAY_DEPLOY.md)).
-20. **Docker** — GHCR image with **`USER 1001`**; `scripts/verify-docker-prebuilds.sh` in CI.
+| Component | What it is |
+|---|---|
+| `mcp-guardian proxy` | The main proxy that intercepts tool calls |
+| `mcp-guardian onboard` | One-command setup that finds and wraps your configs |
+| `mcp-guardian tui` | Terminal UI for watching live traffic |
+| `mcp-guardian doctor` | Health check for your setup |
+| `src/soc-api-server.ts` | Backend API server (serves real data to the dashboard) |
+| `deploy/dashboard-spa/` | SOC Dashboard — the visual interface |
+| `default-policy.yaml` | Default rules (blocks ~300 attack patterns) |
+| `policy-templates/` | Ready-made policy templates for different use cases |
 
 ---
 
-## Architecture
+## SOC Dashboard API
 
-```
- AI Client (Cline/Cursor)
-        │ stdio JSON-RPC
-        ▼
- ┌──────────────────────────────┐
- │  guardian-proxy.sh           │
- │  ┌────────────────────────┐  │
- │  │ PolicyEngine           │  │──► block / flag / pass
- │  │ (audit/warn/block)     │  │
- │  └──────────┬─────────────┘  │
- │             │ forward          │
- │  ┌──────────▼─────────────┐  │
- │  │ Upstream MCP (child)   │  │
- │  └────────────────────────┘  │
- │  HistoryDatabase + metrics   │
- └──────────────────────────────┘
-```
-
-**Data flow:** client `tools/call` → JWT (optional) → policy → upstream or JSON-RPC error `-32001` → audit DB → dashboard/metrics/SIEM.
+The dashboard talks to a backend API server that reads from your real data. See **[SOC-API.md](SOC-API.md)** for the full API reference and deployment guide.
 
 ---
 
-## Attack learning evaluation
+## How the advanced features work (diagrams)
 
-See **[Proven under attack (v2.10.0)](#proven-under-attack-v2100)** for headline metrics and hero charts. Adversarial harness (corpus + live proxy): [summary.md](reports/adversarial-harness/summary.md). Below: embedded figures with captions; full galleries in collapsible blocks.
+### The Security Swarm — continuous red-teaming
 
-### Repo evaluation (reproducible CI)
+![Security Swarm architecture](docs/assets/security-swarm-architecture.png)
 
-Long-run harness: **5003** blocks, **4.9h** sim — [`metrics.json`](reports/attack-learning-eval/metrics.json) · [`summary.md`](reports/attack-learning-eval/summary.md).
+Think of the Security Swarm as a team of AI agents working around the clock to find weaknesses in your setup before attackers do.
 
-| Blocks until suggestion | Rule × tool heatmap |
-|:---:|:---:|
-| ![Blocks until first suggestion per group](reports/attack-learning-eval/figures/fig7-blocks-until-suggestion.png) | ![Blocks by rule and tool](reports/attack-learning-eval/figures/fig6-heatmap.png) |
+There are two tracks running in parallel:
 
-*Instant clusters at **3** blocks per group; batch at **~1000+** when debounce never fires mid-stream.*
+- **The testing track (top)** — Scout agents generate attack attempts, test them against your policy, check if any slip through, and write up a report. This runs automatically and keeps a library of 300+ known attacks up to date.
+- **The learning track (bottom)** — Every time the live proxy blocks a real tool call, a learning agent looks at it, compares it to known patterns, and teaches the system to recognize similar attacks faster next time.
 
-*Which policies fire on which tools under the synthetic attack mix (`semantic-shell-guard:search` dominant).*
+The two tracks feed each other: real-world blocks strengthen the test library, and new test discoveries improve live detection. It's a self-improving loop that never stops.
 
-Regenerate: `pnpm eval:attack-learning:long` then `pnpm eval:attack-learning:charts`. Interactive: [attack-learning-eval.canvas.tsx](reports/attack-learning-eval/attack-learning-eval.canvas.tsx).
-
-<details>
-<summary><strong>All repo eval figures (fig1–fig7)</strong></summary>
-
-| Fig | Chart | Caption |
-|-----|-------|---------|
-| 1 | ![Block rate per minute](reports/attack-learning-eval/figures/fig1-blocks-per-minute.png) | Steady ~15–19 blocks/min — continuous enterprise stream, not a single burst |
-| 2 | ![Cumulative suggestions](reports/attack-learning-eval/figures/fig2-cumulative-suggestions.png) | Instant vs batch cumulative suggestions (also in hero row above) |
-| 3 | ![Repeat clusters](reports/attack-learning-eval/figures/fig3-repeat-clusters.png) | Top `(rule, tool)` with ≥3 blocks in 5 min — `semantic-shell-guard:search` (32) |
-| 5 | ![Queue size](reports/attack-learning-eval/figures/fig5-queue-size.png) | Pending queue depth — both modes peak at **5**; instant fills incrementally |
-| 6 | ![Heatmap](reports/attack-learning-eval/figures/fig6-heatmap.png) | Blocks by rule × tool (also embedded above) |
-| 7 | ![Blocks until suggestion](reports/attack-learning-eval/figures/fig7-blocks-until-suggestion.png) | Blocks until suggestion per group (also embedded above) |
-
-*Fig 4 (`fig4-cdf-time-to-suggestion.png`) omitted: degenerate CDF (one point per category) renders blank; use median time-to-suggestion in the metrics table instead.*
-
-</details>
-
-### Adversarial test harness (live proxy + policy parity — May 2026)
-
-**CI-gated** corpus + evasion + live stdio proxy validation — full metrics in [Proven under attack (v2.10.0)](#adversarial-test-harness-live-proxy--policy-parity--may-2026) above. Key numbers: **154/154** corpus attacks blocked, **0** FP on **74** benign + edge fixtures (**228** JSON evaluated; **151** attack + **55** benign on disk), **148/155** evasion blocked (7 tracked bypasses), **26/26** Node integration, **400/402** (99.5%) Python/TS parity with **0** corpus mismatches, streaming **3/3**, secret scanner **14/14**. Reports: [`reports/adversarial-harness/`](reports/adversarial-harness/). Python port caveats: [`POLICY_PORT_GAPS.md`](adversarial-harness/python/POLICY_PORT_GAPS.md).
-
-```bash
-./adversarial-harness/run-all.sh
-node adversarial-harness/run-harness.mjs
-pnpm exec tsx adversarial-harness/scripts/compare-node-python.ts
-```
-
-### Security Swarm (CI + runtime learning loop)
-
-Architecture diagram: [Security Swarm architecture](#security-swarm-architecture) (top of README). Closed-loop **agentic** workflow: CI agents discover and gate policy quality; the production proxy runs the same learning loop on every real `tools/call`.
-
-| Track | Components | Output |
-|-------|------------|--------|
-| **CI agents** | Scout · Corpus · Evasion · Parity · Proxy · Report | `reports/security-swarm/latest.json` (CI evidence), adversarial harness, corpus eval |
-| **Runtime (proxy)** | BlockGuard · InstantLearner · SemanticAuditor · PatternSynthesizer · Calibrator | `history.db`, attack-learning state, policy suggestions |
-| **Solo analyze** | `run-analysis.mjs` orchestrator | `reports/tenants/{tenantId}/security-swarm/*` — `report.json`, `traffic-summary.json`, `visuals-data.json`, `analysis.txt` |
-| **Continuous attack** | `run-continuous-live-attack.mjs` | Long-lived Ollama/hybrid stream → block-rate validation (`pnpm real-life:continuous`) |
-
-Gates: **228/228** corpus, **0** bypasses, **100%** corpus parity. Full agent table: [security-swarm/README.md](security-swarm/README.md).
-
-**v3.0+ license:** `pnpm security-swarm:*` and `run-analysis.mjs` require a valid Pro license (`GUARDIAN_LICENSE_KEY` + `GUARDIAN_CONTROL_PLANE_URL`) unless you use a maintainer bypass. **Local dev:** `NODE_ENV=development GUARDIAN_DEV_UNLOCK_ALL=true` or `GUARDIAN_CI_BYPASS_LICENSE=true` (CI only). Upstream GitHub Actions sets the CI bypass for corpus/swarm jobs.
-
-```bash
-# Local maintainer run (no license key)
-NODE_ENV=development GUARDIAN_DEV_UNLOCK_ALL=true SWARM_TOOL_WATCH=true pnpm security-swarm:fast
-
-pnpm security-swarm:analyze       # one-click: live MCP + gates → tenant artifacts (~2–15 min) [Pro]
-pnpm security-swarm:analyze:full  # includes continuous attack phase when Ollama configured
-pnpm real-life:continuous         # 60-min hybrid attack stream (LIVE_ATTACK_DURATION_MINUTES=60)
-pnpm security-swarm               # full CI swarm (nightly)
-pnpm security-swarm:fast          # PR path (~5–15 min)
-pnpm security-swarm:calibrate     # LLM threshold recommendations from labeled audits
-```
-
-Primary report after analyze: `reports/tenants/{tenantId}/security-swarm/report.json` (plain English) and `analysis.txt` (technical appendix). Dashboard **Agent flow** → **Run full security analysis** writes tenant-scoped artifacts; **Analysis** tab shows the same inline — **personalized traffic** (`traffic-summary.json`), **live interactive charts** (`GET /api/visuals/live`), and PNG gallery (`figures/manifest.json`).
-
-**Pipeline phases** (`run-analysis.mjs`): user-server probes → **traffic summary** → calibrate → swarm gates → **visuals-data** + matplotlib figures → plain-English **report.json** → `analysis.txt`. Optional **`--continuous`** phase runs `pnpm real-life:continuous` for sustained block-rate evidence.
-
-**Continuous attack env** (see [scenarios/real-life/README.md](scenarios/real-life/README.md)):
-
-| Variable | Default | Purpose |
-|----------|---------|---------|
-| `LIVE_ATTACK_DURATION_MINUTES` | `60` | Wall-clock duration (max 180) |
-| `LIVE_ATTACK_INTERVAL_MS` | `250` | Pause between tool calls |
-| `LIVE_ATTACK_BENIGN_RATIO` | `0.08` | Benign calls for false-positive tracking |
-| `LIVE_ATTACK_ESCALATION` | `true` | Phase 2: unicode-mutated repeats of blocked patterns |
-
-```bash
-pnpm security-swarm:visuals-data   # export visuals-data.json only
-pnpm agent:proxy-traffic           # seed history.db via Guardian (IDE alternative)
-```
-
-Tenant artifacts: [`reports/tenants/`](reports/tenants/) · CI evidence: [`reports/security-swarm/`](reports/security-swarm/) · [`security-swarm/README.md`](security-swarm/README.md) · deployment profiles in [`docs/AI_LEARNING.md`](docs/AI_LEARNING.md#deployment-profiles-security-swarm).
-
-### Enterprise five-scenario simulation (May 2026 package)
-
-**Synthetic** harness: **330** requests, **93.33%** block rate, **0** false positives, **38.8 ms** avg simulated detection latency ([`attack-simulation-metrics.json`](reports/enterprise-attack-sim/attack-simulation-metrics.json)). Open [attack-simulation-dashboard.html](reports/enterprise-attack-sim/attack-simulation-dashboard.html) for inline SVG charts. Reports: [enterprise-attack-sim/README.md](reports/enterprise-attack-sim/README.md) · [MCP_GUARDIAN_FINDINGS.md](reports/enterprise-attack-sim/MCP_GUARDIAN_FINDINGS.md). **Not** CI-gated; prefer repo eval above for learning latency claims.
-
-```bash
-npx tsx reports/enterprise-attack-sim/enterprise-attack-simulator.ts
-npx tsx reports/enterprise-attack-sim/generate-dashboard.ts
-```
-
-### Extended attack simulation (sca collateral)
-
-**Synthetic** 180-minute live-proxy escalation ([sca/README.md](sca/README.md)): **349,200** requests, **95.6%** overall detection, Stage 2 **+8.8pp** vs Stage 1, latency **189ms → 111ms** (~58% faster) per [LIVE_PROXY_ATTACK_SUMMARY.md](sca/LIVE_PROXY_ATTACK_SUMMARY.md). **Not** the same dataset as repo `metrics.json` or enterprise-attack-sim JSON.
-
-| Detection latency (Stage 1 → 2) | 180-min attack timeline | Two-stage learning architecture |
-|:---:|:---:|:---:|
-| ![Detection latency by attack type](sca/CHART_3_Detection_Latency.png) | ![Attack sequence and detection rate](sca/CHART_5_Attack_Timeline.png) | ![Instant + batch learning stages](sca/CHART_7_AI_Learning_Stages.png) |
-
-*~58% faster detection in Stage 2; model poisoning drops **680ms → 256ms** in the sim narrative.*
-
-*Escalation at ~112 min triggers adapted Stage 2 attacks — detection rate improves along the timeline.*
-
-*Maps proxy blocks → instant rolling stats → suggestion queue → debounced batch review (aligns with production env vars).*
-
-Further reading: [ATTACK_SIMULATION_INDEX.md](sca/ATTACK_SIMULATION_INDEX.md) · [EXECUTIVE_SUMMARY.md](sca/EXECUTIVE_SUMMARY.md) (Vitest **99.8%** pass, **7.0/10** readiness).
-
-<details>
-<summary><strong>All SCA charts (CHART_1–CHART_9)</strong></summary>
-
-| Chart | Figure | Caption |
-|-------|--------|---------|
-| 1 | ![Detection accuracy](sca/CHART_1_Detection_Accuracy.png) | Stage 1 vs 2 detection by attack type (+8.8pp avg) — hero row above |
-| 2 | ![AI confidence evolution](sca/CHART_2_AI_Confidence_Evolution.png) | Confidence vs accuracy over time (~0.88 calibration by end) |
-| 3 | ![Detection latency](sca/CHART_3_Detection_Latency.png) | Latency by attack; Stage 1 → 2 improvement (embedded above) |
-| 4 | ![Request blocking matrix](sca/CHART_4_Request_Blocking_Matrix.png) | Blocked vs allowed per attack — **333,141 / 349,200** blocked in sim |
-| 5 | ![Attack timeline](sca/CHART_5_Attack_Timeline.png) | 180-min sequence (embedded above) |
-| 6 | ![Security metrics dashboard](sca/CHART_6_Security_Metrics_Dashboard.png) | Six-panel heatmap, scatter, distributions |
-| 7 | ![AI learning stages](sca/CHART_7_AI_Learning_Stages.png) | Architecture diagram (embedded above) |
-| 8 | ![Performance under load](sca/CHART_8_Performance_Under_Load.png) | CPU/memory/throughput — **92%** stability under sustained load |
-| 9 | ![Attack surface coverage](sca/CHART_9_Attack_Surface_Coverage.png) | Coverage across eight attack categories (~96% Stage 2 avg) |
-
-*CHART_10 (cost-benefit / ROI) omitted — synthetic business case; PNG kept in `sca/` but not linked in docs.*
-
-</details>
-
-```bash
-pnpm eval:attack-learning          # short scenario (~52 min sim)
-pnpm eval:attack-learning:long     # sustained stream (updates long-run metrics)
-pnpm eval:attack-learning:charts   # refresh fig1–fig7 PNGs
-```
+> **Pro feature** — requires a license key. Run with `pnpm security-swarm`.
 
 ---
 
-## Development
+### Threat Lab — AI discovers new attack patterns
 
-```bash
-git clone https://github.com/rudraneel93/mcp-guardian.git
-cd mcp-guardian
-pnpm install && pnpm build && pnpm test
-pnpm test:integration      # 54 integration tests (echo HTTP/WS/SSE/stdio fixtures)
-pnpm enterprise:preflight  # staging/prod env checks
-./scripts/verify-live-integration.sh
-pnpm run dogfood          # sandboxed multi-server scenario (CI)
-pnpm run live:tui-demo    # write shared ~/.mcp-guardian/history.db for TUI smoke test
-pnpm eval                 # enterprise corpus (228 entries, PolicyEngine + default-policy)
-./adversarial-harness/run-all.sh   # full adversarial harness → reports/adversarial-harness/
-node adversarial-harness/run-harness.mjs
-pnpm exec tsx adversarial-harness/scripts/compare-node-python.ts   # Node/Python parity by fixture id
-pnpm benchmark:proxy-slo  # pipelined proxy RTT (CI gate); see Performance & benchmarks below
-node scripts/generate-pen-test-report.cjs   # docs/PEN_TEST_REPORT.md from eval output
-```
+![LLM Threat Discovery architecture](docs/assets/llm-threat-discovery-architecture.png)
 
-### Performance & benchmarks
+The Threat Lab uses a local AI model (Ollama/Qwen) to invent new attack patterns that haven't been seen before.
 
-Load tests use three layers — do not mix them when quoting latency. Full comparison table and artifact paths: **[benchmarks/results/concurrent-tool-calls-summary.md](benchmarks/results/concurrent-tool-calls-summary.md)** (also [proxy tiers](benchmarks/results/proxy-slo-by-concurrency-summary.md), [multi-proxy](benchmarks/results/concurrent-multi-proxy-summary.md)).
+Here's how it works step by step:
 
-| Layer | Command | Measures |
-|-------|---------|----------|
-| **Policy-only** | `pnpm benchmark:concurrent` | In-process `PolicyEngine.evaluateAsync` — rule tuning, not proxy RTT |
-| **Proxy tiers** | `pnpm benchmark:proxy-tiers` | Stdio `McpProxyServer` → echo at 1 / 10 / 25 / 50 in-flight per instance |
-| **Multi-replica** | `pnpm benchmark:multi-proxy` | K forked proxies (default 10×100) vs single-proxy 1k burst |
+1. **Gather signals** — it looks at recent blocks from the proxy, semantic flags, CVE databases, and the swarm's bypass findings
+2. **Generate attacks** — the LLM proposes new attack fixtures and potential YAML rule additions based on those signals
+3. **Validate** — automated gates check if the proposals are valid and don't break anything
+4. **Human review** — before anything is added to your policy, **you review and approve it**. Nothing applies automatically.
 
-**Latest runs (2026-05-18, darwin arm64, Node 23):**
+This means the system gets smarter over time, but you stay in control of every change.
 
-| Scenario | Correctness | p95 | SLO |
-|----------|-------------|-----|-----|
-| Policy 1k concurrent | 100% | ~100 ms | PASS (p95 &lt; 500 ms) |
-| Proxy @ 10 in-flight | 100% | ~420 ms | PASS (p95 &lt; 500 ms) |
-| Single proxy 1k burst (`benchmark:concurrent-proxy`) | 100% | ~37 s | Correct, but **not** a deployment SLO — stdio contention |
-| 10 replicas × 100 calls | 100% | ~11.7 s global | ~3× lower p95 than single-proxy 1k burst |
-
-**Tiered proxy SLO gates** (per-pod in-flight; env `BENCH_PROXY_CONCURRENCY_TIERS`):
-
-| In-flight | p95 gate | Latest |
-|-----------|----------|--------|
-| 1 | &lt; 150 ms | FAIL (~155 ms) — matches strict CI `benchmark:proxy-slo` intent |
-| 10 | &lt; 500 ms | **PASS** (~420 ms) |
-| 25 | &lt; 1500 ms | FAIL (~1953 ms) |
-| 50 | &lt; 3000 ms | **PASS** (~2906 ms) |
-
-```bash
-pnpm benchmark:concurrent         # policy-only 1k-way
-pnpm benchmark:proxy-tiers          # deployment SLO tiers
-pnpm benchmark:multi-proxy          # horizontal scale (default K=10, 1000 total)
-pnpm benchmark:concurrent-proxy     # worst-case single-proxy 1k burst
-pnpm benchmark:proxy-slo            # pipelined CI gate (default p95 < 150 ms)
-```
-
-**Guidance**
-
-- **Policy-only** — tune YAML/semantic rules and in-process policy latency; safe to run 1000-way.
-- **Proxy tiers** — set per-pod deployment SLOs at realistic queue depth (~**10** in-flight, not 1000 on one process).
-- **Scale horizontally** — shard clients across replicas; one stdio proxy serializes under burst load.
-- **Do not claim sub-150 ms at 1k concurrent** on the proxy path; that gate applies to pipelined/sequential CI (`benchmark:proxy-slo`), not concurrent burst.
-- **HTTP/SSE/WebSocket/streamable HTTP** — integration tests use real echo fixtures ([`tests/fixtures/mcp-http-echo-server.cjs`](tests/fixtures/mcp-http-echo-server.cjs), [`mcp-ws-echo-server.cjs`](tests/fixtures/mcp-ws-echo-server.cjs), [`mcp-sse-echo-server.cjs`](tests/fixtures/mcp-sse-echo-server.cjs)); stdio tiered proxy benchmarks remain the primary latency reference
-
-### Test & evidence depth (v2.9.2)
-
-| Asset | Count / scope |
-|-------|----------------|
-| Vitest suite | **~1054** tests (**165** files; `pnpm vitest run`) |
-| **Integration** | **54/54** — `pnpm test:integration`; streamable HTTP relay, multi-tenant dashboard, real MCP stdio |
-| **Adversarial harness** | **154/154** corpus attacks · **0** FP (**74** benign + edge) · **148/155** evasion (7 tracked bypasses) · **26/26** Node live integration · **472/472** Python/TS parity — [reports/adversarial-harness/](reports/adversarial-harness/) |
-| v2.9.2 regressions | adversarial harness, dashboard-rbac, streaming inspector, attack-learning confidence gate, `RequestIdLock` stdio tests, allowlist policy test |
-| v2.8.1 regressions | `instant-attack-learning` |
-| Enterprise attack sim | **330** synthetic scenarios — [reports/enterprise-attack-sim/](reports/enterprise-attack-sim/) |
-| Security assessment | **8.6/10** static review — [MCP_GUARDIAN_EXECUTIVE_SUMMARY.md](reports/enterprise-attack-sim/MCP_GUARDIAN_EXECUTIVE_SUMMARY.md) |
-| v2.8.0 regressions | `policy-engine-memory`, `pgbouncer-check`, `dpop-redis-lock`, `cost-auditor-audit-mode`, `memory-monitor` |
-| v2.7.6 regressions | `cost-governance`, `dpop-require`, `redis-client`, `mtls-config` |
-| Enterprise corpus | **228** JSON fixtures on disk (`corpus/`) — **151** attack + **55** benign + edge-cases |
-| Corpus categories | benign (55), prompt-injection (32), credential-exfil (23), sql-nosql (26), ssrf-url (26), shell-obfuscation (26), cross-tool-chain (16), edge-cases (22) |
-| CI corpus eval | `pnpm eval` on every PR; artifact `corpus-eval-report.json` |
-| CI benchmarks | `benchmark:proxy-slo` pipelined gate (150 ms p95); tiered proxy SLOs via `benchmark:proxy-tiers` |
-| E2E proxy tests | `proxy-with-policy.e2e` + `adversarial-proxy.e2e` (10 attacks) + harness `node/` (26 tests, mock MCP stdio) |
-| Pen-test docs | [docs/PEN_TEST_REPORT.md](docs/PEN_TEST_REPORT.md), [security/ATTACK_MATRIX.md](security/ATTACK_MATRIX.md) |
-
-Monorepo layout: [packages/PACKAGING.md](packages/PACKAGING.md)
-
-**Supply chain:** `pnpm-lock.yaml` is committed; use `pnpm install --frozen-lockfile`. CI runs `pnpm audit --audit-level=high` and publishes CycloneDX SBOMs. npm releases use `--provenance` on version tags; GHCR images are cosign-signed. We do **not** claim SLSA Level 3 yet — see [docs/SUPPLY_CHAIN.md](docs/SUPPLY_CHAIN.md).
+> **Pro feature** — requires a license key + local Ollama with `qwen3:8b`. Run with `pnpm security-swarm:threat-lab`.
 
 ---
 
-## FAQ
+### Auto Threat Research — autonomous attack library building
 
-### Why does the report say “Use your IDE MCP tools through Guardian”?
+![Self-Sustaining Threat Research architecture](docs/assets/auto-threat-research-architecture.png)
 
-Regression **gates** passed, but **`traffic-summary.json` had zero `call_records`** in the window (or the traffic step failed to read `history.db`). Fix: (1) `pnpm onboard -- --client cursor --apply` and use **wrapped MCP servers** in the IDE, or (2) `pnpm agent:proxy-traffic`, then regenerate traffic + report (commands in [Start here](#start-here-solo-developer)).
+While the Threat Lab requires you to trigger it, Auto Threat Research runs in the background automatically whenever something interesting happens.
 
-### Do Cursor chat tools (Read, Grep, Shell) count as MCP traffic?
+The flow:
 
-**No.** Only MCP **`tools/call`** through a Guardian **proxy** process are stored in `history.db`. Built-in Cursor agent tools use a separate path. To personalize reports from chat-driven workflows, route MCP servers through Guardian (`onboard` / `wrap`) or run `pnpm agent:proxy-traffic`.
+1. **Watch for signals** — the proxy detects a semantic flag, a repeat block, or a CVE hit
+2. **Queue it** — these signals are batched up (it waits a few seconds to group related events)
+3. **Research it** — the LLM investigates: what attack class is this? What variations exist?
+4. **Classify and write** — the finding is classified by type and written to the attack corpus
 
-### “Visuals data unavailable” on the dashboard?
+Importantly: **nothing is auto-applied to your policy**. This is an audit-only research loop. It just builds your library of known attacks for future reference and rule suggestions.
 
-Usually **`/api/visuals/live` returned 404** because `dist/` was stale (dashboard API added in source but not compiled). Run `pnpm build` (or `pnpm exec tsc --project tsconfig.json`), restart `pnpm dashboard:proxy`, hard-refresh the browser. If `visuals-data.json` is missing, the API generates it on first request when `history.db` is readable.
-
-### Dashboard page keeps scrolling/jumping?
-
-Fixed in SPA: report section no longer calls `scrollIntoView` on every artifact WebSocket tick; the activity timeline auto-scrolls **inside its panel** only (`scrollTop`, not the whole page). Rebuild with `pnpm dashboard:build` and refresh. Disable **Auto-scroll** under Activity timeline if needed.
-
-### How do I connect Cline in real time?
-
-Run `mcp-guardian wrap --client cline --policy policy-audit.yaml --apply`, restart VS Code, use Cline normally. See [docs/REAL_WORLD_INTEGRATION.md](docs/REAL_WORLD_INTEGRATION.md).
-
-### How do I connect Cursor?
-
-```bash
-pnpm build
-pnpm onboard -- --client cursor --apply
-# Reload Cursor — verify Setup tab in dashboard
-pnpm dashboard:proxy
-```
-
-See [Real-World Integration](#real-world-integration-cline-cursor-claude-code) and [Dashboard & seamless analysis](#dashboard--seamless-analysis).
-
-### How is this different from a WAF?
-
-MCP Guardian understands `tools/call`, tool names, argument schemas, and MCP server CVEs — not just HTTP patterns.
-
-### Does the proxy add latency?
-
-Typically **5–25ms** per call for regex/schema policy (JWT +5–15ms). LLM semantic runs at manifest time, not per call.
-
-### Can I run without blocking?
-
-Use `policy-audit.yaml` or set `mode: audit` in your policy file.
-
-### Cline, Cursor, and OAuth on stdio?
-
-MCP clients differ in how they attach credentials. MCP Guardian extracts bearer tokens from (in order):
-
-| Source | Example | Cursor | Cline |
-|--------|---------|--------|-------|
-| `initialize` → `params.clientInfo.headers.Authorization` | HTTP-style metadata on handshake | Supported when client sends headers | Varies by transport |
-| JSON-RPC root `Authorization` | `{ "Authorization": "Bearer …", "method": "tools/call" }` | Some HTTP bridges | Rare on stdio |
-| `params._meta.auth.Authorization` | MCP auth extension in tool calls | Common for authenticated MCP | Check server card |
-| `params._meta.auth.access_token` | Raw token in `_meta.auth` | Supported | Supported |
-| Env `MCP_GUARDIAN_BEARER_TOKEN` / `GUARDIAN_BEARER_TOKEN` | Set in proxy wrapper `env` | **Recommended** for stdio | **Recommended** for stdio |
-
-For stdio-only setups without JWT infrastructure, set `MCP_GUARDIAN_BEARER_TOKEN` in the Guardian proxy `env` block (or use audit mode). For production OIDC, configure `OAuthValidator` with issuer/audience and optional `GUARDIAN_REQUIRE_DPOP=true` — see [docs/PRODUCTION_AUTH.md](docs/PRODUCTION_AUTH.md).
-
-### TUI vs Docker database?
-
-TUI reads `~/.mcp-guardian/history.db` (or `MCP_GUARDIAN_DB_PATH`). Docker uses `/data` unless you bind-mount the **same file** into the container and host. Different paths = different numbers — not a sync bug.
-
-### Why does the TUI show 0 records or frozen counts?
-
-Usually one of:
-
-1. **Wrong DB file** — another process wrote to `history-<pid>-<timestamp>.db` while the TUI reads `history.db`. Run `mcp-guardian doctor`, check the TUI footer `DB:` line, and ensure proxy/demo/proxy logs reference the same path.
-2. **No proxied traffic yet** — scan-only data does not create `call_records`. Run a wrapped server or `pnpm run live:tui-demo`.
-3. **Stale build** — `pnpm run build` after pulling; the TUI runs `dist/cli.js`, not TypeScript sources.
-4. **Port 4000 busy** — proxy skips dashboard/WS; TUI falls back to polling (still works if the DB is shared).
-
-### Why does FULL ANALYSIS disagree with the summary?
-
-Older builds cached text in `~/.mcp-guardian/.ai-report.json` from a single-server run. Current builds regenerate analysis from the DB when `call_records` exist. Delete `.ai-report.json` if you still see mismatches after upgrading.
-
-### Multi-replica?
-
-Set `REDIS_URL`, **Sentinel** (`REDIS_SENTINELS` + `REDIS_SENTINEL_MASTER_NAME`), or **Cluster** (`REDIS_CLUSTER_NODES`) and `GUARDIAN_STRICT_MODE=true` — see [docs/REDIS_HA.md](docs/REDIS_HA.md). Use PostgreSQL for shared audit (`DB_TYPE=postgres`) with **PgBouncer** in front (direct `:5432` exhausts `max_connections` under load). Optional: `GUARDIAN_REQUIRE_PGBOUNCER=true`. For sender-constrained OAuth, set `GUARDIAN_REQUIRE_DPOP=true` ([docs/PRODUCTION_AUTH.md](docs/PRODUCTION_AUTH.md)). **Do not** run Redis active-active across regions (>80ms RTT breaks locks). See [docs/SCALE_AND_RESILIENCE.md](docs/SCALE_AND_RESILIENCE.md).
-
-### How do I verify policy before block mode?
-
-```bash
-mcp-guardian proxy --policy default-policy.yaml --dry-run
-```
-
-### How do I contribute?
-
-See [CONTRIBUTING.md](CONTRIBUTING.md). Run `pnpm install && pnpm build && pnpm test`.
+> **Pro feature** — runs automatically when `GUARDIAN_THREAT_RESEARCH_AUTO=true` is set.
 
 ---
 
-## Roadmap
+## Pro Features
 
-### Shipped in v2.10.0
-- **Shared MCP gateway** — `GUARDIAN_GATEWAY_MODE`, Helm gateway ingress, [GATEWAY_DEPLOY.md](docs/GATEWAY_DEPLOY.md)
-- **WebSocket in ProxyManager** — config `transport: "websocket"`
-- **Security swarm hardening** — `run-step.mjs` timeouts, HMAC evasion signing, agent circuit breaker
-- **Per-tenant budget** — `tenant-budget.ts` on semantic hot path
-- **Core package** — Ajv schema validation, TR39 offline regex, semantic circuit breaker
-- **Enterprise §6 closure** — 24h LLM cache, 10/min semantic cap, local fallback on LLM failure, Postgres RLS, DPoP lock-free, policy compile cache, dashboard query cache, HIPAA audit doc, DR runbook
-- **Helm enterprise overlay** — PDB, resources, NetworkPolicy, backup CronJob, semantic/sync defaults
+- **Security Swarm** — autonomous AI agents that continuously red-team your setup and discover new attack patterns
+- **Threat Lab** — LLM-powered threat discovery (uses local Ollama or cloud LLM)
+- **Fleet management** — manage multiple Guardian instances across servers
+- **Enterprise deployment** — Kubernetes Helm chart, PostgreSQL backend, multi-tenancy, SSO
 
-### Shipped in v2.9.3
-- **Enterprise multi-tenant hardening** — JWT-bound tenant isolation, per-tenant semantic JSON, tenant-scoped audit/cost/security/health (Postgres migrations 004/005)
-- **Unified response security gate** — `gateToolResponseText()` on stdio, HTTP, SSE, WebSocket, streamable HTTP; `GUARDIAN_RESPONSE_DLP_MODE=redact|block`
-- **Enterprise auth** — OIDC introspection, Redis token revocation, mTLS hot-reload, session rotation on use
-- **Audit hash chain** — `GUARDIAN_AUDIT_HASH_CHAIN` for tamper-evident policy audit JSONL
-- **Streamable HTTP relay** — `GUARDIAN_STREAMABLE_HTTP_UPSTREAM_RELAY` with response gate
-- **Mock-free transport tests** — real MCP echo fixtures; SSE/WS/HTTP integration without `vi.fn` policy doubles
-- **Enterprise verify scripts** — `pnpm enterprise:preflight`, `enterprise:pilot`, `enterprise:cutover`, `enterprise:compliance-report`
-- **CI enterprise job** — Redis + Postgres service containers; integration + dashboard multi-tenant regression
+Get a Pro license at **[mcp-guardian-cloud.vercel.app](https://mcp-guardian-cloud.vercel.app)** ($4.99 lifetime).
 
-### Shipped in v2.9.2
-- **Seamless analysis platform** — `pnpm onboard`, dashboard **Setup** / **Agent flow** / **Analysis** tabs, inline plain-English `report.json`, personalized `traffic-summary.json`, live **infrastructure visuals** (`/api/visuals/live`, `visuals-data.json`, Recharts + matplotlib gallery), `pnpm agent:proxy-traffic`, `scripts/start-dashboard-proxy.sh` stale-dist rebuild
-- **Enterprise test package** — five-scenario attack sim + security assessment under [reports/enterprise-attack-sim/](reports/enterprise-attack-sim/)
-- **Comprehensive adversarial harness** — [`adversarial-harness/`](adversarial-harness/) + [`reports/adversarial-harness/`](reports/adversarial-harness/): **154/154** corpus attacks, **148/155** evasion (7 tracked bypasses), **26/26** live Node proxy tests, **472/472** Python/TS parity, streaming **3/3**, secret scanner **14/14**
-- **Dashboard RBAC** — `viewer` / `analyst` / `operator` / `admin` / `tenant-admin`; `GUARDIAN_DASHBOARD_ROLES`
-- **Streaming response inspection** — 64KB windows + overlap (`GUARDIAN_SKIP_RESPONSE_SCAN`)
-- **Bounded audit queue** — `GUARDIAN_AUDIT_QUEUE_MAX` (default 5000), batch drain
-- **Distributed policy eval cache** — Redis + LRU (`GUARDIAN_POLICY_EVAL_CACHE`)
-- **Local semantic fallback** — heuristic classifier when no LLM API key (`GUARDIAN_LOCAL_SEMANTIC`)
-- **Attack-learning auto-apply** — `attackMinConfidence()` on `SuggestionEngine` auto-apply (not at suggestion time)
-- **Test suite (1005)** — policy allowlist fixture, stdio `RequestIdLock` semantics (same id serialized; parallel ids), harness + RBAC regressions
-
-### Shipped in v2.8.1
-- **Per-block instant attack learning** — `recordInstantBlockEvent` on every proxy block; rolling stats in `GUARDIAN_AI_ATTACK_STATE_PATH` (`~/.mcp-guardian/.attack-learning-state.json`)
-- **Sliding-window suggestions** — after `GUARDIAN_AI_ATTACK_MIN_BLOCKS` (default 3) same `(block_rule, tool)` within `GUARDIAN_AI_INSTANT_WINDOW_MS` (default 5 min)
-- **Optional instant LLM** — `GUARDIAN_AI_INSTANT_LLM` + `GUARDIAN_AI_INSTANT_LLM_RATE_MS` on critical blocks
-- **Metrics** — `mcp_guardian_instant_learning_events_total`; structured log `instant_learning_event`
-- **Proxy path** — `recordDeniedCall` → instant stats + debounced full cycle (`GUARDIAN_AI_BLOCK_DEBOUNCE_MS`)
-
-### Shipped in v2.8.0
-- **Production hardening bundle** — All five blockers resolved; [docs/PRODUCTION_BLOCKERS.md](docs/PRODUCTION_BLOCKERS.md)
-- **LRU memory caps** — `updateAgeOnGet: false` on llm-cache, CVE cache, session/nonce caches; bounded session LRU (10k / 50k + sweep)
-- **PgBouncer strict mode** — `checkPgBouncerAtStartup`, `GUARDIAN_REQUIRE_PGBOUNCER`, `REPLICA_COUNT` + `GUARDIAN_STRICT_MODE` fail-fast for direct `:5432` at scale
-- **DPoP Redis lock** — `claimDpopJtiOnRedis` distributed lock; `tests/auth/dpop-redis-lock.test.ts` (100-way race)
-- **Cost auditor honesty** — Default `model-only`; `actual` from proxy; `GUARDIAN_COST_ALLOW_ESTIMATES` for legacy `estimated`
-- **Plugin SDK npm** — `@mcp-guardian/plugin-sdk` publish with `prepublishOnly` build; [docs/PLUGIN_SDK.md](docs/PLUGIN_SDK.md)
-- **Policy engine memory test** — 120k unique clients, cache stays bounded (`tests/policy/policy-engine-memory.test.ts`)
-
-### Shipped in v2.7.6
-- **Cost governance template** — [`policy-templates/enterprise-cost-governance.yaml`](policy-templates/enterprise-cost-governance.yaml), [`policy-templates/README.md`](policy-templates/README.md); `GUARDIAN_DAILY_BUDGET_USD` + `CostAuditor` daily spend APIs
-- **DPoP enforcement** — `GUARDIAN_REQUIRE_DPOP=true` ([`src/auth/dpop-enforcement.ts`](src/auth/dpop-enforcement.ts)); Helm `dpop.require`
-- **Redis HA** — Sentinel (`REDIS_SENTINELS`, `REDIS_SENTINEL_MASTER_NAME`) and Cluster (`REDIS_CLUSTER_NODES`) via [`src/utils/redis-client.ts`](src/utils/redis-client.ts); [docs/REDIS_HA.md](docs/REDIS_HA.md)
-- **Production auth** — [docs/PRODUCTION_AUTH.md](docs/PRODUCTION_AUTH.md) (DPoP + mTLS); Helm `templates/mtls-secret.yaml`, `mtls.enabled`
-- **Docker supply chain** — non-root `USER 1001`, [`scripts/verify-docker-prebuilds.sh`](scripts/verify-docker-prebuilds.sh), docker-publish smoke as uid 1001
-
-### Shipped in v2.7.5
-- **Enterprise corpus** — 228 attack/benign/edge fixtures under `corpus/`; [`corpus/README.md`](corpus/README.md), [`corpus/manifest.yaml`](corpus/manifest.yaml)
-- **Adversarial harness** — [`adversarial-harness/`](adversarial-harness/README.md), Python policy port + Node live proxy tests; reports under [`reports/adversarial-harness/`](reports/adversarial-harness/)
-- **Corpus eval** — `corpus/run-eval.ts`, `pnpm eval`, per-category precision/recall; CI fails on missed attacks; artifact `corpus-eval-report.json`
-- **Benchmarks in CI** — `benchmarks/run.ts` job; p95 gate via `BENCH_P95_THRESHOLD_MS` ([`benchmarks/README.md`](benchmarks/README.md))
-- **Adversarial E2E** — `tests/e2e/adversarial-proxy.e2e.test.ts` (live proxy + 10 corpus attacks)
-- **Pen-test artifacts** — [`docs/PEN_TEST_REPORT.md`](docs/PEN_TEST_REPORT.md), [`security/ATTACK_MATRIX.md`](security/ATTACK_MATRIX.md), `scripts/generate-pen-test-report.cjs`
-
-### Shipped in v2.7.4
-- **Redis LLM cache** — [`src/ai/llm-cache.ts`](src/ai/llm-cache.ts): Redis-backed responses with in-memory LRU fallback; SHA-256 keys over `model + system + prompt + temperature`; Prometheus `mcp_guardian_llm_cache_hits_total` / `mcp_guardian_llm_cache_misses_total`
-- **Centralized LLM config** — [`src/config/llm-config.ts`](src/config/llm-config.ts): `getLlmConfig()`, `resolveModelId()`; env `GUARDIAN_LLM_PROVIDER`, `GUARDIAN_LLM_MODEL`, `GUARDIAN_LLM_MAX_TOKENS`, `GUARDIAN_LLM_TIMEOUT_MS`, `GUARDIAN_LLM_TEMPERATURE`, `OLLAMA_BASE_URL` ([AI_LEARNING.md](docs/AI_LEARNING.md))
-
-### Shipped in v2.7.2
-- **Secret scanner** — 150+ patterns (267 rules; `getSecretRuleCount()`), pre-compiled rules in `src/scanners/secret-rules.ts`; proxy-time DLP on arguments and responses; [`tests/secret-scanner-coverage.test.ts`](tests/secret-scanner-coverage.test.ts)
-
-### Shipped in v2.7.0
-- **Plugin SDK v3.0** — `@mcp-guardian/plugin-sdk`, plugins on by default
-- **Dashboard SPA** — `deploy/dashboard-spa/` at `/` (REST + WebSocket)
-- **Fleet** — `mcp-guardian fleet status`, TUI Fleet tab, Postgres or `GUARDIAN_FLEET_DB_PATHS`
-- **HTTP tools policy template** — `GUARDIAN_HTTP_TOOLS_POLICY`
-- **Multi-region labels** — `GUARDIAN_REGION`, Redis per-region keys ([MULTI_REGION.md](docs/MULTI_REGION.md), active-passive)
-- **Async semantic audit** — queue cap, min confidence, Prometheus `mcp_guardian_semantic_audit_*` ([AI_LEARNING.md](docs/AI_LEARNING.md))
-- **Windows installer script** — Inno Setup `installer/windows/mcp-guardian.iss` (build and sign locally)
-
-### Shipped in v2.6.x
-- **2.6.8** — URL/SSRF guard, expanded path/credential patterns, SQL/NoSQL/LDAP/GraphQL/SSTI hardening, puppeteer URL validation, 58-scenario adversarial regression tests
-- **2.6.7** — GDPR Article 17 `eraseAllAuditData`, cost-pricing recursion fix
-- OPA block precedence, non-blocking policy hot-reload
-- Windows `guardian-proxy.ps1` + `wrap` on win32
-- PgBouncer mandatory guidance (>50 replicas / multi-replica Postgres)
-- AI quorum, drift detection, `mcp-guardian ai rollback`
-- Dashboard CSRF, session regeneration, fail-closed auth
-- DPoP `jti` replay protection (Redis `jti` dedup when `REDIS_URL` set)
-- Metrics dispose, SQLite busy retry, Remote SSH path map
-
-### Planned
-- **Multi-region active-active** — SQLite/Postgres replication across regions (today: labels + active-passive Redis only)
-- **Signed plugin marketplace** — curated third-party detector distribution
-- **Production MSI pipeline** — org code-signing and CI for Windows installers (script ships in v2.7)
-- **Enhanced gateway auth** — per-tenant gateway JWT at ingress (basic gateway shipped in v2.10)
-- **Enhanced SIEM templates** — richer export mappings
-- **v3.0** — Cloud control plane MVP + marketing site shipped (`apps/cloud`); **Pro paywall hardening** (swarm CLI, fleet, AI learning, dual license). Managed proxy hosting + gRPC transport remain planned
+Community features (everything in this README) are free and MIT licensed.
 
 ---
 
-## MCP Guardian Pro — $4.99 lifetime (open-core)
+## Supported AI Clients
 
-**npm install stays free (MIT).** You pay for a **lifetime Pro license** that unlocks runtime features on **self-hosted** Guardian — not for the public tarball. Checkout is hosted by **[Lemon Squeezy](https://www.lemonsqueezy.com/)** (Merchant of Record; global VAT handled). No in-repo payment tables.
+MCP Guardian auto-discovers config files from:
 
-### Product structure
+- **Cline** (VS Code extension)
+- **Claude Desktop**
+- **Cursor**
+- **Windsurf**
 
-| Item | Detail |
-|------|--------|
-| **Product** | MCP Guardian Pro — Lifetime |
-| **Price** | **$4.99 USD** one-time (no subscription) |
-| **What buyers get** | License key in receipt email + [PRO_SETUP.md](docs/PRO_SETUP.md) |
-| **Fulfillment** | Key → `GUARDIAN_LICENSE_KEY` on your Guardian host; cloud webhook auto-registers keys; validated via `GET /api/v1/license` |
-| **Free OSS** | Community proxy + CLI + YAML policy (MIT) |
-| **Paid** | Dashboard, WebSocket feed, security swarm, AI learning APIs, multi-tenant JWT, semantic async tier-2 |
-
-### Community vs Pro
-
-| | Community (free) | Pro (license) |
-|--|------------------|---------------|
-| `npm install` / MIT source | Yes | Yes |
-| `mcp-guardian proxy` + block policy | Yes | Yes |
-| CLI `scan`, `policy test` | Yes | Yes |
-| Dashboard SPA + live APIs | No | Yes |
-| `PUT /api/policy` editor | No | Yes |
-| Security swarm / Analysis tab | No | Yes |
-| `mcp-guardian fleet` + TUI Fleet tab | No | Yes |
-| AI attack learning (instant + batch on proxy) | No | Yes |
-| `GUARDIAN_MULTI_TENANT_ENABLED` | No | Yes |
-| `GUARDIAN_SEMANTIC_ASYNC` (tier-2 LLM audit) | No | Yes |
-| Threat Lab / Threat Discovery / Auto Threat Research | No | Yes (LLM required — see below) |
-
-**Default (v3.0+):** Pro features require `GUARDIAN_LICENSE_KEY` + `GUARDIAN_CONTROL_PLANE_URL` (see [PRO_SETUP.md](docs/PRO_SETUP.md)). Security Swarm CLI, fleet, and AI learning are gated at runtime. **Maintainer local dev:** `NODE_ENV=development` + `GUARDIAN_DEV_UNLOCK_ALL=true` (also bypasses `check-pro.js` for swarm CLI). **CI only:** `GUARDIAN_CI_BYPASS_LICENSE=true`. **Deprecated:** `GUARDIAN_OPEN_CORE=false` (ignored with a warning).
-
-### LLM prerequisites (Threat Lab, Threat Discovery, semantic async)
-
-Pro unlocks LLM-powered features, but **Ollama and model weights are not npm dependencies**. `npm install` and `git clone` do **not** download Ollama or `qwen3:8b`. For the default local setup:
-
-1. Install [Ollama](https://ollama.com/download) on the Guardian host.
-2. `ollama pull qwen3:8b` and `ollama serve`.
-3. Set `GUARDIAN_LLM_ENABLED=true`, `OLLAMA_BASE_URL=http://localhost:11434`, and optionally `GUARDIAN_LLM_MODEL=qwen3:8b`.
-
-Threat Lab and Threat Discovery require a reachable LLM — they skip cleanly when Ollama is offline (no synthetic fallback). You can use **Anthropic/OpenAI** instead via `GUARDIAN_LLM_PROVIDER` and API keys. Full buyer steps: [docs/PRO_SETUP.md#llm-prerequisites](docs/PRO_SETUP.md#llm-prerequisites) · [docs/THREAT_LAB.md](docs/THREAT_LAB.md).
-
-### Can users bypass Pro without paying?
-
-| Release line | Pro without a license? | How |
-|--------------|------------------------|-----|
-| **npm @3.0+** (default) | **No** (honest use) | Runtime checks on swarm CLI, dashboard, fleet, AI learning; validated against cloud control plane |
-| **npm 2.9.7–2.10.x** | **Partially** | Dashboard/API gated; swarm CLI + `GUARDIAN_OPEN_CORE=false` bypass |
-| **npm &lt; 2.9.7** | **Yes** on that tag | No license system in code |
-| **Pinned old tag / fork** | **Yes, technically** | Immutable npm tags; MIT Community fork may strip checks ([LICENSE-PRO](LICENSE-PRO) applies to Pro Scope use) |
-
-Pinned npm **&lt; 3.0** keeps older behavior — not supported for new Pro buyers. Details: [PRO_LICENSE.md](docs/PRO_LICENSE.md) · [MONETIZATION.md](docs/MONETIZATION.md).
-
-### Purchase & setup
-
-| Step | Link |
-|------|------|
-| **Buy Pro** | [MCP Guardian Pro — $4.99 lifetime](https://mcp-guardian.lemonsqueezy.com/checkout/buy/f725abfe-93c0-4bd7-8add-d15af13958fb) (override with `GUARDIAN_PRO_CHECKOUT_URL` / `NEXT_PUBLIC_PRO_CHECKOUT_URL`) |
-| **After purchase** | [docs/PRO_SETUP.md](docs/PRO_SETUP.md) — install Guardian, set license env vars |
-| **Operators / vendors** | [docs/MONETIZATION.md](docs/MONETIZATION.md) · [docs/LEMON_SQUEEZY_SETUP.md](docs/LEMON_SQUEEZY_SETUP.md) · [docs/SAAS_CONTROL_PLANE.md](docs/SAAS_CONTROL_PLANE.md) (free `apps/cloud` for org keys) |
-
-### License environment variables
-
-| Variable | Where | Purpose |
-|----------|-------|---------|
-| `GUARDIAN_LICENSE_KEY` | Self-hosted Guardian | Buyer license key from Lemon Squeezy |
-| `GUARDIAN_CONTROL_PLANE_URL` | Self-hosted Guardian | Cloud base URL for license validation |
-| `GUARDIAN_DEV_UNLOCK_ALL` | Self-hosted (dev only) | `true` with `NODE_ENV=development` — unlock Pro locally; never in production |
-| `GUARDIAN_CI_BYPASS_LICENSE` | CI only | `true` in upstream GitHub Actions — not for end users |
-| `GUARDIAN_PRO_CHECKOUT_URL` | Guardian / cloud | Checkout link in 402 responses + upgrade banner |
-| `GUARDIAN_REQUIRE_LICENSE` | Self-hosted Guardian | `true` = fail dashboard startup without valid license |
-| `NEXT_PUBLIC_PRO_CHECKOUT_URL` | `apps/cloud` | “Buy Pro” on cloud homepage |
-
-**What is not paywalled:** the public npm package (MIT Community Scope — see [COMMUNITY_SCOPE.md](COMMUNITY_SCOPE.md)). Pro components are governed by [LICENSE-PRO](LICENSE-PRO). Forks may remove runtime checks; the commercial product is the **license + support path**, not withholding source code.
-
-**Enterprise self-hosted** (Postgres HA, gateway, RLS, Helm) uses the same Pro license model for dashboard/swarm/multi-tenant; formal SOC2/FedRAMP programs are separate from the $4.99 SKU.
+Or point it at any MCP config file with `--config path/to/config.json`.
 
 ---
 
 ## License
 
-**Dual license (v3.0+):**
-
-- **[LICENSE](LICENSE)** — MIT for [Community Scope](COMMUNITY_SCOPE.md) (proxy, CLI, corpus, adversarial harness, local policy).
-- **[LICENSE-PRO](LICENSE-PRO)** — commercial terms for Pro Scope (Security Swarm, dashboard Pro APIs, semantic async tier, multi-tenant enterprise bindings, cloud license service). Use requires a valid Pro license.
-
-Pro is an optional paid lifetime license; setup: [docs/PRO_SETUP.md](docs/PRO_SETUP.md) · [docs/PRO_LICENSE.md](docs/PRO_LICENSE.md) · [docs/MONETIZATION.md](docs/MONETIZATION.md).
-
----
-
-**Docs:** [Monetization / Pro](docs/MONETIZATION.md) · [Production blockers](docs/PRODUCTION_BLOCKERS.md) · [Enterprise deploy](docs/ENTERPRISE_DEPLOY.md) · [Enterprise readiness](docs/ENTERPRISE_READINESS.md) · [Gap matrix (mcp tests 31)](reports/enterprise-mcp-tests-31/gap-matrix.md) · [Gateway deploy](docs/GATEWAY_DEPLOY.md) · [Database ops](docs/DATABASE_OPERATIONS.md) · [HIPAA audit trail](docs/HIPAA_AUDIT_TRAIL.md) · [SaaS control plane](docs/SAAS_CONTROL_PLANE.md) · [Enterprise evidence pack](docs/ENTERPRISE_EVIDENCE_PACK.md) · [Enterprise roadmap](docs/ENTERPRISE_ROADMAP.md) · [Multi-tenancy](docs/MULTI_TENANCY.md) · [Security swarm](security-swarm/README.md) · [Policy](docs/POLICY.md) · [Production auth](docs/PRODUCTION_AUTH.md) · [Redis HA](docs/REDIS_HA.md) · [Policy templates](policy-templates/README.md) · [Corpus](corpus/README.md) · [Pen-test report](docs/PEN_TEST_REPORT.md) · [Attack matrix](security/ATTACK_MATRIX.md) · [Benchmarks](benchmarks/README.md) · [Plugin SDK](docs/PLUGIN_SDK.md) · [AI learning](docs/AI_LEARNING.md) · [Adversarial harness](adversarial-harness/README.md) · [Enterprise attack sim](reports/enterprise-attack-sim/README.md) · [Cost governance](docs/COST_GOVERNANCE.md) · [Scale & resilience](docs/SCALE_AND_RESILIENCE.md) · [Compliance](docs/COMPLIANCE.md) · [Security](SECURITY.md) · [CHANGELOG](CHANGELOG.md)
-
-**Built with** TypeScript, better-sqlite3 12.10+, pino, prom-client, jose 6.x, commander, chalk, tiktoken, and the MCP SDK.
+MIT for all community features. See [LICENSE](LICENSE) and [COMMUNITY_SCOPE.md](COMMUNITY_SCOPE.md) for details.
+Pro features are covered by [LICENSE-PRO](LICENSE-PRO).

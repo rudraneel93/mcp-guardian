@@ -1,0 +1,258 @@
+{
+  "version": 1,
+  "mode": "fast",
+  "timestamp": "2026-05-23T22:05:05.836Z",
+  "commitSha": "8691d4fb2536ccd0dddf9d1ff267c2c86b013411",
+  "findings": [
+    {
+      "severity": "info",
+      "source": "scout",
+      "summary": "Moderate advisories: 3"
+    },
+    {
+      "severity": "critical",
+      "source": "evasion",
+      "summary": "7 net-new bypass(es) vs baseline manifest"
+    }
+  ],
+  "timings": {
+    "totalSec": 205.1,
+    "steps": [
+      {
+        "label": "scout-audit",
+        "elapsedSec": 1.8
+      },
+      {
+        "label": "pnpm-build",
+        "elapsedSec": 4.7
+      },
+      {
+        "label": "vitest-policy-proxy-utils",
+        "elapsedSec": 85.1
+      },
+      {
+        "label": "corpus-eval",
+        "elapsedSec": 7
+      },
+      {
+        "label": "setup-python-venv",
+        "elapsedSec": 0.4
+      },
+      {
+        "label": "harness-node-tests",
+        "elapsedSec": 41.7
+      },
+      {
+        "label": "harness-parity",
+        "elapsedSec": 64.4
+      },
+      {
+        "label": "evasion-generate",
+        "elapsedSec": 0
+      }
+    ]
+  },
+  "gates": {
+    "corpus": true,
+    "parity": true,
+    "steps": true,
+    "scout": true,
+    "bypassCount": 7,
+    "netNewBypassCount": 7,
+    "maxBypasses": 0,
+    "bypassBaseline": false
+  },
+  "bypasses": {
+    "detected": 7,
+    "baselineKnown": 0,
+    "netNew": 7,
+    "items": [
+      {
+        "id": "adv-123",
+        "source": "custom",
+        "rel": "adv-123.json",
+        "expected": "block",
+        "actual": "pass",
+        "rule": "allowlist",
+        "reason": "Tool 'search' allowlisted",
+        "fingerprint": "id:adv-123",
+        "_netNew": true
+      },
+      {
+        "id": "adv-124",
+        "source": "custom",
+        "rel": "adv-124.json",
+        "expected": "block",
+        "actual": "pass",
+        "rule": "allowlist",
+        "reason": "Tool 'search' allowlisted",
+        "fingerprint": "id:adv-124",
+        "_netNew": true
+      },
+      {
+        "id": "adv-125",
+        "source": "custom",
+        "rel": "adv-125.json",
+        "expected": "block",
+        "actual": "pass",
+        "rule": "allowlist",
+        "reason": "Tool 'search' allowlisted",
+        "fingerprint": "id:adv-125",
+        "_netNew": true
+      },
+      {
+        "id": "adv-126",
+        "source": "custom",
+        "rel": "adv-126.json",
+        "expected": "block",
+        "actual": "pass",
+        "rule": "allowlist",
+        "reason": "Tool 'search' allowlisted",
+        "fingerprint": "id:adv-126",
+        "_netNew": true
+      },
+      {
+        "id": "adv-127",
+        "source": "custom",
+        "rel": "adv-127.json",
+        "expected": "block",
+        "actual": "pass",
+        "rule": "allowlist",
+        "reason": "Tool 'search' allowlisted",
+        "fingerprint": "id:adv-127",
+        "_netNew": true
+      },
+      {
+        "id": "adv-128",
+        "source": "custom",
+        "rel": "adv-128.json",
+        "expected": "block",
+        "actual": "pass",
+        "rule": "allowlist",
+        "reason": "Tool 'search' allowlisted",
+        "fingerprint": "id:adv-128",
+        "_netNew": true
+      },
+      {
+        "id": "adv-130",
+        "source": "custom",
+        "rel": "adv-130.json",
+        "expected": "block",
+        "actual": "pass",
+        "rule": "allowlist",
+        "reason": "Tool 'search' allowlisted",
+        "fingerprint": "id:adv-130",
+        "_netNew": true
+      }
+    ]
+  },
+  "overall": false,
+  "steps": [
+    {
+      "label": "scout-audit",
+      "ok": true,
+      "status": 0,
+      "timedOut": false,
+      "elapsedSec": 1.8,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "pnpm-build",
+      "ok": true,
+      "status": 0,
+      "timedOut": false,
+      "elapsedSec": 4.7,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "vitest-policy-proxy-utils",
+      "ok": true,
+      "status": 0,
+      "timedOut": false,
+      "elapsedSec": 85.1,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "corpus-eval",
+      "ok": true,
+      "status": 0,
+      "timedOut": false,
+      "elapsedSec": 7,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "setup-python-venv",
+      "ok": true,
+      "status": 0,
+      "timedOut": false,
+      "elapsedSec": 0.4,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "harness-node-tests",
+      "ok": true,
+      "status": 0,
+      "timedOut": false,
+      "elapsedSec": 41.7,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "harness-parity",
+      "ok": true,
+      "status": 0,
+      "timedOut": false,
+      "elapsedSec": 64.4,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "evasion-generate",
+      "ok": true,
+      "status": 0,
+      "timedOut": false,
+      "elapsedSec": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "scout": {
+    "agent": "scout",
+    "timestamp": "2026-05-23T22:01:42.547Z",
+    "audit": {
+      "ok": true,
+      "status": 1,
+      "advisories": [],
+      "summary": {
+        "info": 0,
+        "low": 1,
+        "moderate": 3,
+        "high": 0,
+        "critical": 0
+      }
+    }
+  },
+  "corpus": {
+    "totalEntries": 228,
+    "fn": 0,
+    "fp": 0,
+    "attackBlockRate": 1,
+    "benignPassRate": 1
+  },
+  "parity": {
+    "agreement": 486,
+    "total": 486,
+    "agreementRate": 1,
+    "corpusMismatches": 0
+  },
+  "harness": {
+    "allOk": false
+  },
+  "evasionPromotions": 7,
+  "recommendedEnvProfile": "high-paranoia"
+}

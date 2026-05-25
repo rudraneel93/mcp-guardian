@@ -1,0 +1,85 @@
+{
+  "bypasses": [
+    {
+      "id": "adv-123",
+      "source": "custom",
+      "rel": "adv-123.json",
+      "expected": "block",
+      "actual": "pass",
+      "rule": "allowlist",
+      "reason": "Tool 'search' allowlisted",
+      "fingerprint": "id:adv-123",
+      "_netNew": true
+    },
+    {
+      "id": "adv-124",
+      "source": "custom",
+      "rel": "adv-124.json",
+      "expected": "block",
+      "actual": "pass",
+      "rule": "allowlist",
+      "reason": "Tool 'search' allowlisted",
+      "fingerprint": "id:adv-124",
+      "_netNew": true
+    },
+    {
+      "id": "adv-125",
+      "source": "custom",
+      "rel": "adv-125.json",
+      "expected": "block",
+      "actual": "pass",
+      "rule": "allowlist",
+      "reason": "Tool 'search' allowlisted",
+      "fingerprint": "id:adv-125",
+      "_netNew": true
+    },
+    {
+      "id": "adv-126",
+      "source": "custom",
+      "rel": "adv-126.json",
+      "expected": "block",
+      "actual": "pass",
+      "rule": "allowlist",
+      "reason": "Tool 'search' allowlisted",
+      "fingerprint": "id:adv-126",
+      "_netNew": true
+    },
+    {
+      "id": "adv-127",
+      "source": "custom",
+      "rel": "adv-127.json",
+      "expected": "block",
+      "actual": "pass",
+      "rule": "allowlist",
+      "reason": "Tool 'search' allowlisted",
+      "fingerprint": "id:adv-127",
+      "_netNew": true
+    },
+    {
+      "id": "adv-128",
+      "source": "custom",
+      "rel": "adv-128.json",
+      "expected": "block",
+      "actual": "pass",
+      "rule": "allowlist",
+      "reason": "Tool 'search' allowlisted",
+      "fingerprint": "id:adv-128",
+      "_netNew": true
+    },
+    {
+      "id": "adv-130",
+      "source": "custom",
+      "rel": "adv-130.json",
+      "expected": "block",
+      "actual": "pass",
+      "rule": "allowlist",
+      "reason": "Tool 'search' allowlisted",
+      "fingerprint": "id:adv-130",
+      "_netNew": true
+    }
+  ],
+  "count": 7,
+  "netNew": 7,
+  "baselineKnown": 0,
+  "baselineManifest": "security-swarm/config/bypass-baseline.json"
+}

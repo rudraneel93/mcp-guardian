@@ -1,7 +1,7 @@
 # Security Swarm Report
 
-Generated: 2026-05-23T22:09:23.181Z  
-Commit: `8691d4fb2536ccd0dddf9d1ff267c2c86b013411`  
+Generated: 2026-05-24T16:03:36.198Z  
+Commit: `1e8036abb0161357c12eec830f50150da53e1415`  
 Mode: **fast**  
 Overall: **PASS**
 
@@ -9,7 +9,7 @@ Overall: **PASS**
 
 | Gate | Status |
 |------|--------|
-| Corpus (228 entries) | PASS |
+| Corpus (300 entries) | PASS |
 | Parity (corpus 100%) | PASS |
 | Steps | PASS |
 | Bypasses (detected / net-new / max) | 0 / 0 / 0 |

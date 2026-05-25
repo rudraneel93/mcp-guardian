@@ -1,6 +1,6 @@
 {
-  "timestamp": "2026-05-23T22:23:54.287Z",
-  "count": 9,
+  "timestamp": "2026-05-24T17:15:57.074Z",
+  "count": 13,
   "entries": [
     {
       "advId": "adv-130",
@@ -125,6 +125,62 @@
       "hypothesis": "An attacker can inject semantically crafted prompts to bypass existing path-traversal detection mechanisms.",
       "confidence": 0.95,
       "timestamp": "2026-05-23T22:23:54.286Z",
+      "toolName": "read_file",
+      "category": "prompt-injection"
+    },
+    {
+      "advId": "adv-216",
+      "relPath": "adversarial-harness/fixtures/custom-attacks/adv-216.json",
+      "fingerprint": "a7627a128cc637e9",
+      "source": "semantic_flag",
+      "inputFingerprint": "semantic:1779572589030-acdrloi",
+      "llmUsed": true,
+      "attackClass": "semantic-prompt-injection",
+      "hypothesis": "An attacker can inject semantically crafted prompts to bypass path-traversal detection by leveraging null-terminated strings.",
+      "confidence": 0.95,
+      "timestamp": "2026-05-24T15:35:00.397Z",
+      "toolName": "read_file",
+      "category": "prompt-injection"
+    },
+    {
+      "advId": "adv-217",
+      "relPath": "adversarial-harness/fixtures/custom-attacks/adv-217.json",
+      "fingerprint": "d8f9ffa48f1b29c2",
+      "source": "corpus_proactive",
+      "inputFingerprint": "corpus-seed:corpus/attacks/boundary-evasion/boundary-evasion-003.json",
+      "llmUsed": true,
+      "attackClass": "semantic-prompt-injection",
+      "hypothesis": "An attacker can inject semantically meaningful prompts to bypass boundary checks by leveraging contextual ambiguity in path traversal patterns.",
+      "confidence": 0.95,
+      "timestamp": "2026-05-24T15:35:34.843Z",
+      "toolName": "read_file",
+      "category": "prompt-injection"
+    },
+    {
+      "advId": "adv-218",
+      "relPath": "adversarial-harness/fixtures/custom-attacks/adv-218.json",
+      "fingerprint": "0d19d4fe3018c9d3",
+      "source": "corpus_proactive",
+      "inputFingerprint": "corpus-seed:corpus/attacks/boundary-evasion/boundary-evasion-005.json",
+      "llmUsed": true,
+      "attackClass": "semantic-prompt-injection",
+      "hypothesis": "An attacker can inject semantically equivalent prompts to bypass detection mechanisms by leveraging contextual ambiguity.",
+      "confidence": 0.95,
+      "timestamp": "2026-05-24T15:36:07.415Z",
+      "toolName": "read_file",
+      "category": "prompt-injection"
+    },
+    {
+      "advId": "adv-219",
+      "relPath": "adversarial-harness/fixtures/custom-attacks/adv-219.json",
+      "fingerprint": "92821a7e644a6473",
+      "source": "corpus_proactive",
+      "inputFingerprint": "corpus-seed:corpus/attacks/boundary-evasion/boundary-evasion-004.json",
+      "llmUsed": true,
+      "attackClass": "semantic-prompt-injection",
+      "hypothesis": "An attacker can inject semantically meaningful prompts to bypass boundary checks in path traversal scenarios.",
+      "confidence": 0.95,
+      "timestamp": "2026-05-24T17:15:57.074Z",
       "toolName": "read_file",
       "category": "prompt-injection"
     }

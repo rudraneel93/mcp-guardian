@@ -1649,7 +1649,8 @@ export async function startDashboardServer(
           const actionFilter = q.get('action') || '';
           const serverFilter = q.get('server') || '';
           const region = parseRegionParam(q);
-          const fed = await resolveChartContext(requestTenantId, 90, region);
+          const windowDays = parseWindowDays(q.get('window') || '7');
+          const fed = await resolveChartContext(requestTenantId, windowDays, region);
           const db = fed.db;
           if (!db) {
             writeJson(res, 200, unavailable({
@@ -1658,8 +1659,8 @@ export async function startDashboardServer(
             return;
           }
 
-          const srvs = await getAllActiveServerNames(db, requestTenantId);
-          let records = await loadAllCallRecords(db, srvs, requestTenantId);
+          // Use the windowed loader so audit honors the dashboard window
+          let records = await loadAllRecordsInWindow(db, requestTenantId, windowDays);
           if (serverFilter) {
             records = records.filter((r) => r.serverName === serverFilter);
           }
@@ -2558,28 +2559,45 @@ export async function startDashboardServer(
         writeJson(res, 200, candidate);
         return;
       }
-      // ── Threat Discovery Scheduler endpoints (Enterprise 1A) ──
+      // ── Threat Discovery Scheduler (in-process, persists to ~/.mcp-guardian) ──
       if (url === '/api/threat-discovery/scheduler/start' && method === 'POST') {
         setCors();
-        writeJson(res, 200, { status: 'ok', message: 'Scheduler started — use node scripts/schedule-threat-discovery.mjs' });
+        try {
+          const { startScheduler } = await import('./threat-discovery-scheduler.js');
+          const state = startScheduler(requestTenantId);
+          writeJson(res, 200, { status: 'ok', ...state });
+        } catch (err) {
+          writeJson(res, 500, {
+            status: 'error',
+            error: err instanceof Error ? err.message : 'Failed to start scheduler',
+          });
+        }
         return;
       }
       if (url === '/api/threat-discovery/scheduler/stop' && method === 'POST') {
         setCors();
-        writeJson(res, 200, { status: 'ok', message: 'Scheduler stopped' });
+        try {
+          const { stopScheduler } = await import('./threat-discovery-scheduler.js');
+          const state = stopScheduler();
+          writeJson(res, 200, { status: 'ok', ...state });
+        } catch (err) {
+          writeJson(res, 500, {
+            status: 'error',
+            error: err instanceof Error ? err.message : 'Failed to stop scheduler',
+          });
+        }
         return;
       }
       if (url === '/api/threat-discovery/scheduler/status' && method === 'GET') {
         setCors();
-        const { existsSync, readFileSync } = await import('fs');
-        const { join } = await import('path');
-        const { homedir } = await import('os');
-        const statePath = join(homedir(), '.mcp-guardian', 'scheduler-state.json');
-        if (existsSync(statePath)) {
-          const state = JSON.parse(readFileSync(statePath, 'utf-8'));
-          writeJson(res, 200, state);
-        } else {
-          writeJson(res, 200, { running: false, lastRunAt: null, message: 'Scheduler not started — run node scripts/schedule-threat-discovery.mjs' });
+        try {
+          const { getSchedulerStatus } = await import('./threat-discovery-scheduler.js');
+          writeJson(res, 200, getSchedulerStatus(requestTenantId));
+        } catch (err) {
+          writeJson(res, 500, {
+            running: false,
+            error: err instanceof Error ? err.message : 'Failed to read scheduler status',
+          });
         }
         return;
       }

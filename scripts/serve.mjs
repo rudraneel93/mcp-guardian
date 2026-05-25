@@ -1,63 +1,78 @@
 #!/usr/bin/env node
 /**
- * Serve the MCP Guardian SOC dashboard (Next.js static export from deploy/dashboard-spa/out).
- * Builds the SPA automatically when out/index.html is missing.
+ * Serve the Guardian SOC Dashboard (dashboard-v3):
+ *   - SOC API backend on :4040 (src/soc-api-server.ts) — real DB/policy data
+ *   - Next.js dev UI on :3000 (GuardianSOCDashboard) — proxies /api → :4040
  *
  * Usage: pnpm serve
- * Env: DASHBOARD_PORT (default 4000), DASHBOARD_AUTH_DISABLED, GUARDIAN_CI_BYPASS_LICENSE
  */
-import { spawnSync } from 'node:child_process';
-import { existsSync, statSync } from 'node:fs';
+import { spawn, spawnSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const OUT_INDEX = join(ROOT, 'deploy', 'dashboard-spa', 'out', 'index.html');
-const DIST_SERVER = join(ROOT, 'dist', 'utils', 'dashboard-server.js');
-const SRC_SERVER = join(ROOT, 'src', 'utils', 'dashboard-server.ts');
+const SPA_ROOT = join(ROOT, 'deploy', 'dashboard-spa');
+const SOC_COMPONENT = join(SPA_ROOT, 'app', 'components', 'GuardianSOCDashboard.tsx');
 
 function run(cmd, args, opts = {}) {
-  return spawnSync(cmd, args, { cwd: ROOT, stdio: 'inherit', ...opts });
+  return spawnSync(cmd, args, { cwd: opts.cwd ?? ROOT, stdio: 'inherit', ...opts });
 }
 
-function needsDistRebuild() {
-  if (!existsSync(DIST_SERVER)) return true;
-  try {
-    return statSync(SRC_SERVER).mtimeMs > statSync(DIST_SERVER).mtimeMs;
-  } catch {
-    return false;
-  }
+function killPort(port) {
+  spawnSync('bash', ['-c', `lsof -ti :${port} 2>/dev/null | xargs -r kill -9 2>/dev/null`], {
+    stdio: 'ignore',
+  });
 }
 
-if (!existsSync(OUT_INDEX)) {
-  console.log('[serve] SOC dashboard not built — running pnpm dashboard:build …\n');
-  const build = run('pnpm', ['dashboard:build']);
-  if (build.status !== 0) {
-    console.error('\n[serve] Build failed. Fix errors above, then retry: pnpm serve');
-    process.exit(build.status ?? 1);
-  }
-  if (!existsSync(OUT_INDEX)) {
-    console.error('[serve] Expected deploy/dashboard-spa/out/index.html after build');
-    process.exit(1);
-  }
+if (!existsSync(SOC_COMPONENT)) {
+  console.error(
+    '[serve] GuardianSOCDashboard not found. Merge branch dashboard-v3 or pull latest:\n' +
+      '  git fetch origin dashboard-v3 && git merge origin/dashboard-v3',
+  );
+  process.exit(1);
 }
 
-if (needsDistRebuild()) {
-  console.log('[serve] Compiling dashboard API (tsc)…');
-  const tsc = run('pnpm', ['exec', 'tsc', '--project', 'tsconfig.json']);
-  if (tsc.status !== 0) process.exit(tsc.status ?? 1);
+if (!existsSync(join(SPA_ROOT, 'node_modules'))) {
+  console.log('[serve] Installing dashboard-spa dependencies…');
+  const inst = run('npm', ['install'], { cwd: SPA_ROOT });
+  if (inst.status !== 0) process.exit(inst.status ?? 1);
 }
 
-process.env.DASHBOARD_ENABLED = 'true';
-process.env.GUARDIAN_WS_ENABLED = process.env.GUARDIAN_WS_ENABLED ?? 'true';
+// Ensure concurrently for soc:full-style orchestration
+try {
+  await import('concurrently');
+} catch {
+  console.log('[serve] Installing concurrently…');
+  const add = run('pnpm', ['add', '-D', 'concurrently']);
+  if (add.status !== 0) process.exit(add.status ?? 1);
+}
+
+killPort(3000);
+killPort(4040);
+killPort(4000);
+
+process.env.SOC_API_PORT = process.env.SOC_API_PORT || '4040';
 process.env.GUARDIAN_CI_BYPASS_LICENSE = process.env.GUARDIAN_CI_BYPASS_LICENSE ?? 'true';
-process.env.DASHBOARD_AUTH_DISABLED = process.env.DASHBOARD_AUTH_DISABLED ?? 'true';
-process.env.GUARDIAN_DASHBOARD_SPA = 'true';
-process.env.GUARDIAN_DASHBOARD_LEGACY = 'false';
 
-const port = process.env.DASHBOARD_PORT || '4000';
-console.log(`[serve] MCP Guardian SOC dashboard → http://localhost:${port}/`);
-console.log('[serve] Tabbed UI: Overview, SOC / AI, Threat Discovery, Policy, Analysis, …');
-console.log('[serve] For live proxy metrics: pnpm dashboard:proxy guardian-configs/filesystem.json\n');
+console.log('[serve] Guardian SOC Dashboard');
+console.log('[serve]   UI:  http://localhost:3000/  (GuardianSOCDashboard + Tailwind)');
+console.log('[serve]   API: http://localhost:4040/  (soc-api-server → ~/.mcp-guardian DB)');
+console.log('[serve] Press Ctrl+C to stop both processes.\n');
 
-await import('./serve-dashboard.mjs');
+const child = spawn(
+  'pnpm',
+  ['exec', 'concurrently', '--kill-others', '-n', 'api,ui', '-c', 'cyan,magenta',
+    'pnpm soc:api:dev',
+    'pnpm dashboard:dev',
+  ],
+  {
+    cwd: ROOT,
+    stdio: 'inherit',
+    env: { ...process.env, FORCE_COLOR: '1' },
+  },
+);
+
+child.on('exit', (code) => process.exit(code ?? 0));
+process.on('SIGINT', () => child.kill('SIGINT'));
+process.on('SIGTERM', () => child.kill('SIGTERM'));

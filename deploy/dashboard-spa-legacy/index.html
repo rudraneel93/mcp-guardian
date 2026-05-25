@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MCP Guardian Dashboard</title>
+  <link rel="stylesheet" href="/dashboard-spa/styles.css">
+</head>
+<body>
+  <header>
+    <h1>MCP Guardian</h1>
+    <p id="status">Connecting…</p>
+  </header>
+  <section class="cards" id="cards">
+    <article class="card"><h2>Requests</h2><p class="metric" id="metric-requests">—</p></article>
+    <article class="card"><h2>Blocked</h2><p class="metric" id="metric-blocked">—</p></article>
+    <article class="card"><h2>Cost (USD)</h2><p class="metric" id="metric-cost">—</p></article>
+    <article class="card"><h2>Instances</h2><p class="metric" id="metric-instances">—</p></article>
+  </section>
+  <section>
+    <h2>Live events</h2>
+    <ul id="events"></ul>
+  </section>
+  <script src="/dashboard-spa/app.js"></script>
+</body>
+</html>

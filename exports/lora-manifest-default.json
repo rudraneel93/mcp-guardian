@@ -1,0 +1,8 @@
+{
+  "tenantId": "default",
+  "modelName": "mcp-guardian-threat:default",
+  "rowCount": 3,
+  "generatedAt": "2026-05-23T21:43:09.203Z",
+  "ollamaCreateHint": "pnpm ai:train-tenant-model -- --tenant=default && GUARDIAN_SEMANTIC_LOCAL_MODEL=mcp-guardian-threat:default GUARDIAN_TENANT_SEMANTIC_MODEL=true",
+  "rowsExported": 3
+}

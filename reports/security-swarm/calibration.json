@@ -1,17 +1,17 @@
 {
-  "timestamp": "2026-05-23T22:11:04.349Z",
+  "timestamp": "2026-05-24T16:38:23.377Z",
   "windowDays": 7,
   "storage": "jsonl",
   "llmConfigured": true,
   "totals": {
-    "records": 45,
-    "flagged": 43,
+    "records": 62,
+    "flagged": 60,
     "labeled": 29,
     "truePositive": 28,
     "falsePositive": 1
   },
   "metrics": {
-    "avgFlagConfidence": 0.792,
+    "avgFlagConfidence": 0.78,
     "labeledFpRate": 0.034
   },
   "thresholds": {
@@ -28,7 +28,7 @@
   "profile": "hybrid",
   "sampleFlagged": [
     {
-      "id": "1779563060043-601s8a1",
+      "id": "1779624740715-5slq6g1",
       "toolName": "run",
       "confidence": 0.75,
       "categories": [
@@ -36,7 +36,7 @@
       ]
     },
     {
-      "id": "1779563610221-d733i29",
+      "id": "1779626077833-a8zuf3i",
       "toolName": "run",
       "confidence": 0.75,
       "categories": [
@@ -44,27 +44,27 @@
       ]
     },
     {
-      "id": "1779571816787-rhif2gf",
-      "toolName": "read_file",
-      "confidence": 0.88,
+      "id": "1779630525779-mhcz5nx",
+      "toolName": "run",
+      "confidence": 0.75,
       "categories": [
-        "path-traversal"
+        "prompt-injection"
       ]
     },
     {
-      "id": "1779571831212-nh1i68x",
-      "toolName": "read_file",
-      "confidence": 0.88,
+      "id": "1779632126055-zclv9sr",
+      "toolName": "run",
+      "confidence": 0.75,
       "categories": [
-        "path-traversal"
+        "prompt-injection"
       ]
     },
     {
-      "id": "1779572589030-acdrloi",
-      "toolName": "read_file",
-      "confidence": 0.88,
+      "id": "1779635179472-hppzy8y",
+      "toolName": "run",
+      "confidence": 0.75,
       "categories": [
-        "path-traversal"
+        "prompt-injection"
       ]
     }
   ],

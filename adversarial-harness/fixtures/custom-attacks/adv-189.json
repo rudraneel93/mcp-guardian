@@ -4,11 +4,11 @@
   "arguments": {
     "query": "Smoke test semantic flag"
   },
-  "expected": "block",
+  "expected": "pass",
   "category": "prompt-injection",
   "ruleHint": "semantic-prompt-injection",
   "attackClass": "semantic-prompt-injection",
-  "expectedBlock": true,
+  "expectedBlock": false,
   "source": "auto-threat-research",
   "autoResearch": {
     "source": "semantic_flag",

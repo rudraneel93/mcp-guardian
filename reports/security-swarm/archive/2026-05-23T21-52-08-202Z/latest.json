@@ -1,0 +1,162 @@
+{
+  "version": 1,
+  "mode": "fast",
+  "timestamp": "2026-05-23T17:46:41.951Z",
+  "commitSha": "ae38d6f6332550b106d29ec15ad107b4aecccab5",
+  "findings": [
+    {
+      "severity": "info",
+      "source": "scout",
+      "summary": "Moderate advisories: 3"
+    }
+  ],
+  "timings": {
+    "totalSec": 191.8,
+    "steps": [
+      {
+        "label": "scout-audit",
+        "elapsedSec": 2
+      },
+      {
+        "label": "pnpm-build",
+        "elapsedSec": 3.4
+      },
+      {
+        "label": "vitest-policy-proxy-utils",
+        "elapsedSec": 72.7
+      },
+      {
+        "label": "corpus-eval",
+        "elapsedSec": 1.5
+      },
+      {
+        "label": "setup-python-venv",
+        "elapsedSec": 0.5
+      },
+      {
+        "label": "harness-node-tests",
+        "elapsedSec": 43.9
+      },
+      {
+        "label": "harness-parity",
+        "elapsedSec": 67.8
+      }
+    ]
+  },
+  "gates": {
+    "corpus": true,
+    "parity": true,
+    "steps": true,
+    "scout": true,
+    "bypassCount": 0,
+    "netNewBypassCount": 0,
+    "maxBypasses": 0,
+    "bypassBaseline": true
+  },
+  "bypasses": {
+    "detected": 0,
+    "baselineKnown": 0,
+    "netNew": 0,
+    "items": []
+  },
+  "overall": true,
+  "steps": [
+    {
+      "label": "scout-audit",
+      "ok": true,
+      "status": 0,
+      "timedOut": false,
+      "elapsedSec": 2,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "pnpm-build",
+      "ok": true,
+      "status": 0,
+      "timedOut": false,
+      "elapsedSec": 3.4,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "vitest-policy-proxy-utils",
+      "ok": true,
+      "status": 0,
+      "timedOut": false,
+      "elapsedSec": 72.7,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "corpus-eval",
+      "ok": true,
+      "status": 0,
+      "timedOut": false,
+      "elapsedSec": 1.5,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "setup-python-venv",
+      "ok": true,
+      "status": 0,
+      "timedOut": false,
+      "elapsedSec": 0.5,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "harness-node-tests",
+      "ok": true,
+      "status": 0,
+      "timedOut": false,
+      "elapsedSec": 43.9,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "harness-parity",
+      "ok": true,
+      "status": 0,
+      "timedOut": false,
+      "elapsedSec": 67.8,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "scout": {
+    "agent": "scout",
+    "timestamp": "2026-05-23T17:43:32.294Z",
+    "audit": {
+      "ok": true,
+      "status": 1,
+      "advisories": [],
+      "summary": {
+        "info": 0,
+        "low": 1,
+        "moderate": 3,
+        "high": 0,
+        "critical": 0
+      }
+    }
+  },
+  "corpus": {
+    "totalEntries": 228,
+    "fn": 0,
+    "fp": 0,
+    "attackBlockRate": 1,
+    "benignPassRate": 1
+  },
+  "parity": {
+    "agreement": 463,
+    "total": 463,
+    "agreementRate": 1,
+    "corpusMismatches": 0
+  },
+  "harness": {
+    "allOk": true
+  },
+  "evasionPromotions": 0,
+  "recommendedEnvProfile": "hybrid"
+}

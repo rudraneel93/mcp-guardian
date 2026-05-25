@@ -1,0 +1,40 @@
+{
+  "agent": "tool-watch",
+  "timestamp": "2026-05-24T16:03:36.996Z",
+  "summary": {
+    "serversChecked": 4,
+    "serversChanged": 0,
+    "criticalCount": 0,
+    "quarantineServers": []
+  },
+  "reports": [
+    {
+      "serverName": "filesystem",
+      "changed": false,
+      "diffs": [],
+      "currentFingerprint": "b2dcdd2fb5b4f5d8",
+      "quarantineRecommended": false
+    },
+    {
+      "serverName": "fixture_echo",
+      "changed": false,
+      "diffs": [],
+      "currentFingerprint": "93e2512c95b5f8f6",
+      "quarantineRecommended": false
+    },
+    {
+      "serverName": "github",
+      "changed": false,
+      "diffs": [],
+      "currentFingerprint": "febff2b76fb3e3ce",
+      "quarantineRecommended": false
+    },
+    {
+      "serverName": "puppeteer",
+      "changed": false,
+      "diffs": [],
+      "currentFingerprint": "887b3bdb9c84a510",
+      "quarantineRecommended": false
+    }
+  ]
+}

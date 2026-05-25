@@ -1,0 +1,147 @@
+{
+  "version": 1,
+  "mode": "fast",
+  "timestamp": "2026-05-25T05:47:09.788Z",
+  "commitSha": "42c3cb0c00d09513e682e531ca07cdbdb98697d2",
+  "findings": [
+    {
+      "severity": "info",
+      "source": "scout",
+      "summary": "Moderate advisories: 3"
+    }
+  ],
+  "timings": {
+    "totalSec": 237.7,
+    "steps": [
+      {
+        "label": "scout-audit",
+        "elapsedSec": 1.3
+      },
+      {
+        "label": "pnpm-build",
+        "elapsedSec": 6.2
+      },
+      {
+        "label": "vitest-policy-proxy-utils",
+        "elapsedSec": 115.6
+      },
+      {
+        "label": "corpus-eval",
+        "elapsedSec": 9.5
+      },
+      {
+        "label": "harness-node-tests",
+        "elapsedSec": 61
+      },
+      {
+        "label": "harness-parity",
+        "elapsedSec": 44.1
+      }
+    ]
+  },
+  "gates": {
+    "corpus": true,
+    "parity": true,
+    "steps": true,
+    "scout": true,
+    "bypassCount": 0,
+    "netNewBypassCount": 0,
+    "maxBypasses": 0,
+    "bypassBaseline": true
+  },
+  "bypasses": {
+    "detected": 0,
+    "baselineKnown": 0,
+    "netNew": 0,
+    "items": []
+  },
+  "overall": true,
+  "steps": [
+    {
+      "label": "scout-audit",
+      "ok": true,
+      "status": 0,
+      "timedOut": false,
+      "elapsedSec": 1.3,
+      "stdout": "[scout] dependency audit: PASS\n[scout] critical=0 high=0 moderate=3 low=1\n",
+      "stderr": ""
+    },
+    {
+      "label": "pnpm-build",
+      "ok": true,
+      "status": 0,
+      "timedOut": false,
+      "elapsedSec": 6.2,
+      "stdout": "\n> @mcp-guardian/server@3.2.5 build:guardian /workspace\n> pnpm --filter @mcp-guardian/plugin-sdk run build && tsc --project tsconfig.json\n\n\n> @mcp-guardian/plugin-sdk@3.2.5 build /workspace/packages/plugin-sdk\n> tsc --project tsconfig.json\n\n",
+      "stderr": ""
+    },
+    {
+      "label": "vitest-policy-proxy-utils",
+      "ok": true,
+      "status": 0,
+      "timedOut": false,
+      "elapsedSec": 115.6,
+      "stdout": "\n> @mcp-guardian/server@3.2.5 test:policy-proxy-utils /workspace\n> vitest run tests/policy/ tests/proxy/ tests/utils/ --reporter=dot\n\n\n RUN  v3.2.4 /workspace\n\n··················································  ✓ attacks/boundary-evasion/boundary-evasion-003.json\n  ✓ attacks/boundary-evasion/boundary-evasion-004.json\n  ✓ attacks/boundary-evasion/boundary-evasion-005.json\n  ✓ attacks/boundary-evasion/boundary-evasion-006.json\n  ✓ attacks/boundary-evasion/boundary-evasion-008.json\n  ✓ attacks/boundary-evasio…[truncated]",
+      "stderr": "5:43:20 AM [vite] warning: `esbuild` option was specified by \"vitest\" plugin. This option is deprecated, please use `oxc` instead.\n{\"level\":30,\"time\":1779687876144,\"pid\":41611,\"hostname\":\"cursor\",\"msg\":\"[policy-watcher] Policy loaded (mode: block, rules: 1)\"}\n{\"level\":30,\"time\":1779687876145,\"pid\":41611,\"hostname\":\"cursor\",\"msg\":\"[policy-watcher] Watching /tmp/guardian-policy-PfY8Cb/policy.yaml for changes\"}\n{\"level\":30,\"time\":1779687876153,\"pid\":41611,\"hostname\":\"cursor\",\"msg\":\"[policy-watcher] Policy load…[truncated]"
+    },
+    {
+      "label": "corpus-eval",
+      "ok": true,
+      "status": 0,
+      "timedOut": false,
+      "elapsedSec": 9.5,
+      "stdout": "Running corpus evaluation (300 entries) against /workspace/default-policy.yaml\n\n  ✓ attacks/boundary-evasion/boundary-evasion-003.json\n  ✓ attacks/boundary-evasion/boundary-evasion-004.json\n  ✓ attacks/boundary-evasion/boundary-evasion-005.json\n  ✓ attacks/boundary-evasion/boundary-evasion-006.json\n  ✓ attacks/boundary-evasion/boundary-evasion-008.json\n  ✓ attacks/boundary-evasion/boundary-evasion-009.json\n  ✓ attacks/boundary-evasion/boundary-evasion-010.json\n  ✓ attacks/command-injection/command-injection…[truncated]",
+      "stderr": ""
+    },
+    {
+      "label": "harness-node-tests",
+      "ok": true,
+      "status": 0,
+      "timedOut": false,
+      "elapsedSec": 61,
+      "stdout": "{\"ok\":true,\"passed\":26,\"failed\":0,\"total\":26,\"vitestExit\":0}\n",
+      "stderr": ""
+    },
+    {
+      "label": "harness-parity",
+      "ok": true,
+      "status": 0,
+      "timedOut": false,
+      "elapsedSec": 44.1,
+      "stdout": "Parity: 300/300 (100.0%) mismatches=0\n",
+      "stderr": ""
+    }
+  ],
+  "scout": {
+    "agent": "scout",
+    "timestamp": "2026-05-25T05:43:13.230Z",
+    "audit": {
+      "ok": true,
+      "status": 1,
+      "advisories": [],
+      "summary": {
+        "info": 0,
+        "low": 1,
+        "moderate": 3,
+        "high": 0,
+        "critical": 0
+      }
+    }
+  },
+  "corpus": {
+    "totalEntries": 300,
+    "fn": 0,
+    "fp": 0,
+    "attackBlockRate": 1,
+    "benignPassRate": 1
+  },
+  "parity": {
+    "agreement": 300,
+    "total": 300,
+    "agreementRate": 1,
+    "corpusMismatches": 0
+  },
+  "harness": null,
+  "evasionPromotions": 7,
+  "recommendedEnvProfile": "hybrid"
+}

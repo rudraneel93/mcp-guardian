@@ -54,18 +54,27 @@ export function VisualsProvider({ children, refreshKey = 0, pollMs = 30_000 }: P
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const gran = windowDays <= 7 ? 'hour' : 'day';
-    const [v, s, ts] = await Promise.all([
-      fetchVisualsLive(windowDays, region || undefined),
-      fetchExecutiveSummary(windowDays, region || undefined),
-      fetchCostTimeseries(windowDays, gran, region || undefined),
-    ]);
-    if (!v.ok) setError(v.message);
-    else setVisuals(v.data);
-    setExecutiveSummary(s);
-    setCostTimeseries(ts);
-    setLastFetchedAt(new Date().toISOString());
-    setLoading(false);
+    try {
+      const gran = windowDays <= 7 ? 'hour' : 'day';
+      const [v, s, ts] = await Promise.all([
+        fetchVisualsLive(windowDays, region || undefined),
+        fetchExecutiveSummary(windowDays, region || undefined),
+        fetchCostTimeseries(windowDays, gran, region || undefined),
+      ]);
+      if (!v.ok) {
+        setError(v.message);
+        // Keep any previously-loaded visuals so charts don't blank out on transient errors
+      } else {
+        setVisuals(v.data);
+      }
+      setExecutiveSummary(s);
+      setCostTimeseries(ts);
+      setLastFetchedAt(new Date().toISOString());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load visuals');
+    } finally {
+      setLoading(false);
+    }
   }, [windowDays, region]);
 
   useEffect(() => {

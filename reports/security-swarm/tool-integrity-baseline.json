@@ -1,0 +1,341 @@
+{
+  "baselines": {
+    "filesystem": {
+      "serverName": "filesystem",
+      "fingerprint": "b2dcdd2fb5b4f5d8",
+      "tools": [
+        {
+          "name": "read_file",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "read_text_file",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "read_media_file",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "read_multiple_files",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "write_file",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "edit_file",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "create_directory",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "list_directory",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "list_directory_with_sizes",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "directory_tree",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "move_file",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "search_files",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "get_file_info",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "list_allowed_directories",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        }
+      ],
+      "toolNames": [
+        "create_directory",
+        "directory_tree",
+        "edit_file",
+        "get_file_info",
+        "list_allowed_directories",
+        "list_directory",
+        "list_directory_with_sizes",
+        "move_file",
+        "read_file",
+        "read_media_file",
+        "read_multiple_files",
+        "read_text_file",
+        "search_files",
+        "write_file"
+      ],
+      "capturedAt": "2026-05-24T16:03:36.995Z"
+    },
+    "fixture_echo": {
+      "serverName": "fixture_echo",
+      "fingerprint": "93e2512c95b5f8f6",
+      "tools": [
+        {
+          "name": "echo",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "add",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "search",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        }
+      ],
+      "toolNames": [
+        "add",
+        "echo",
+        "search"
+      ],
+      "capturedAt": "2026-05-24T16:03:36.996Z"
+    },
+    "github": {
+      "serverName": "github",
+      "fingerprint": "febff2b76fb3e3ce",
+      "tools": [
+        {
+          "name": "create_or_update_file",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "search_repositories",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "create_repository",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "get_file_contents",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "push_files",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "create_issue",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "create_pull_request",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "fork_repository",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "create_branch",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "list_commits",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "list_issues",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "update_issue",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "add_issue_comment",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "search_code",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "search_issues",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "search_users",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "get_issue",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "get_pull_request",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "list_pull_requests",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "create_pull_request_review",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "merge_pull_request",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "get_pull_request_files",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "get_pull_request_status",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "update_pull_request_branch",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "get_pull_request_comments",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "get_pull_request_reviews",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        }
+      ],
+      "toolNames": [
+        "add_issue_comment",
+        "create_branch",
+        "create_issue",
+        "create_or_update_file",
+        "create_pull_request",
+        "create_pull_request_review",
+        "create_repository",
+        "fork_repository",
+        "get_file_contents",
+        "get_issue",
+        "get_pull_request",
+        "get_pull_request_comments",
+        "get_pull_request_files",
+        "get_pull_request_reviews",
+        "get_pull_request_status",
+        "list_commits",
+        "list_issues",
+        "list_pull_requests",
+        "merge_pull_request",
+        "push_files",
+        "search_code",
+        "search_issues",
+        "search_repositories",
+        "search_users",
+        "update_issue",
+        "update_pull_request_branch"
+      ],
+      "capturedAt": "2026-05-24T16:03:36.996Z"
+    },
+    "puppeteer": {
+      "serverName": "puppeteer",
+      "fingerprint": "887b3bdb9c84a510",
+      "tools": [
+        {
+          "name": "puppeteer_navigate",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "puppeteer_screenshot",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "puppeteer_click",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "puppeteer_fill",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "puppeteer_select",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "puppeteer_hover",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        },
+        {
+          "name": "puppeteer_evaluate",
+          "descriptionHash": "e3b0c44298fc1c14",
+          "schemaHash": "44136fa355b3678a"
+        }
+      ],
+      "toolNames": [
+        "puppeteer_click",
+        "puppeteer_evaluate",
+        "puppeteer_fill",
+        "puppeteer_hover",
+        "puppeteer_navigate",
+        "puppeteer_screenshot",
+        "puppeteer_select"
+      ],
+      "capturedAt": "2026-05-24T16:03:36.996Z"
+    }
+  },
+  "updatedAt": "2026-05-24T16:03:36.996Z"
+}
