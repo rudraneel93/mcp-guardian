@@ -116,7 +116,7 @@
     "dashboard:build": "npm run build --prefix deploy/dashboard-spa",
     "dashboard:serve": "node scripts/serve.mjs",
     "dashboard:proxy": "sh scripts/start-dashboard-proxy.sh",
-    "dashboard:dev": "npm run dev --prefix deploy/dashboard-spa",
+    "dashboard:dev": "PORT=3000 npm run dev --prefix deploy/dashboard-spa",
     "soc:api": "tsx src/soc-api-server.ts",
     "soc:api:dev": "SOC_API_PORT=4040 tsx watch src/soc-api-server.ts",
     "soc:full": "concurrently --kill-others \"pnpm soc:api:dev\" \"pnpm dashboard:dev\"",

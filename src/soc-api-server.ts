@@ -1169,6 +1169,163 @@ export async function startSocApiServer(port = 4040): Promise<void> {
     }
   });
 
+  // ── GET /api/security-swarm/traffic-summary — live DB (no static JSON) ───
+  app.get('/api/security-swarm/traffic-summary', async (req: Request, res: Response) => {
+    const windowDays = parseInt(String(req.query['window'] ?? '7'), 10);
+    try {
+      const serverNames = await db.getDistinctActiveServers();
+      const allRecords = await getAllCallRecords(db, serverNames, windowDays);
+
+      if (allRecords.length === 0) {
+        res.json({
+          hasData: false,
+          totalCalls: 0,
+          totalBlocked: 0,
+          totalPassed: 0,
+          windowDays,
+          generatedAt: new Date().toISOString(),
+          servers: [],
+          topBlockRules: [],
+        });
+        return;
+      }
+
+      const totalCalls = allRecords.length;
+      const totalBlocked = allRecords.filter((r) => r.blocked).length;
+      const ruleCounts = new Map<string, number>();
+      const serverMap = new Map<
+        string,
+        { calls: number; blocked: number; tools: Map<string, number>; rules: Map<string, number> }
+      >();
+
+      for (const r of allRecords) {
+        const srv =
+          serverMap.get(r.serverName)
+          ?? { calls: 0, blocked: 0, tools: new Map(), rules: new Map() };
+        srv.calls += 1;
+        if (r.blocked) srv.blocked += 1;
+        srv.tools.set(r.toolName, (srv.tools.get(r.toolName) ?? 0) + 1);
+        if (r.blocked && r.blockRule) {
+          srv.rules.set(r.blockRule, (srv.rules.get(r.blockRule) ?? 0) + 1);
+          ruleCounts.set(r.blockRule, (ruleCounts.get(r.blockRule) ?? 0) + 1);
+        }
+        serverMap.set(r.serverName, srv);
+      }
+
+      const servers = Array.from(serverMap.entries()).map(([serverName, s]) => ({
+        serverName,
+        calls: s.calls,
+        blocked: s.blocked,
+        passed: s.calls - s.blocked,
+        blockRatePct: s.calls > 0 ? Math.round((s.blocked / s.calls) * 100) : 0,
+        topTools: Array.from(s.tools.entries())
+          .map(([tool, count]) => ({ tool, count }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 8),
+        topBlockRules: Array.from(s.rules.entries())
+          .map(([rule, count]) => ({ rule, count }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 5),
+      }));
+
+      const topBlockRules = Array.from(ruleCounts.entries())
+        .map(([rule, count]) => ({ rule, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
+
+      res.json({
+        hasData: true,
+        totalCalls,
+        totalBlocked,
+        totalPassed: totalCalls - totalBlocked,
+        windowDays,
+        generatedAt: new Date().toISOString(),
+        servers,
+        topBlockRules,
+      });
+    } catch (err) {
+      Logger.error(`[soc-api] traffic-summary failed: ${err}`);
+      res.status(500).json({ hasData: false, error: String(err) });
+    }
+  });
+
+  // ── GET /api/security-swarm/user-servers — configs on disk (live probe list) ─
+  app.get('/api/security-swarm/user-servers', async (_req: Request, res: Response) => {
+    try {
+      const servers = await loadServers();
+      const entries = servers.map((s) => ({
+        serverName: s.name,
+        configPath: s.configPath ?? '',
+        transport: s.transport ?? 'stdio',
+        status: 'configured' as const,
+        toolCount: null as number | null,
+        toolNames: [] as string[],
+        probes: [] as { name: string; ok: boolean; detail: string }[],
+        error: null as string | null,
+        latencyMs: null as number | null,
+      }));
+      const ok = entries.length;
+      res.json({
+        timestamp: new Date().toISOString(),
+        summary: { total: entries.length, ok, failed: 0, skipped: 0, allOk: ok > 0 },
+        servers: entries,
+      });
+    } catch (err) {
+      res.status(500).json({ error: String(err) });
+    }
+  });
+
+  // ── GET /api/security-swarm/report-json — plain English from live traffic ───
+  app.get('/api/security-swarm/report-json', async (req: Request, res: Response) => {
+    const windowDays = parseInt(String(req.query['window'] ?? '7'), 10);
+    try {
+      const serverNames = await db.getDistinctActiveServers();
+      const allRecords = await getAllCallRecords(db, serverNames, windowDays);
+      if (allRecords.length === 0) {
+        res.status(404).json({ error: 'No proxy traffic in history DB for this tenant' });
+        return;
+      }
+      const totalCalls = allRecords.length;
+      const blocked = allRecords.filter((r) => r.blocked).length;
+      const blockRate = totalCalls > 0 ? Math.round((blocked / totalCalls) * 1000) / 10 : 0;
+      const ruleCounts = new Map<string, number>();
+      for (const r of allRecords) {
+        if (r.blocked && r.blockRule) {
+          ruleCounts.set(r.blockRule, (ruleCounts.get(r.blockRule) ?? 0) + 1);
+        }
+      }
+      const topRule = Array.from(ruleCounts.entries()).sort((a, b) => b[1] - a[1])[0];
+      res.json({
+        verdict: 'LIVE',
+        headline: `${totalCalls.toLocaleString()} proxied calls (${blocked.toLocaleString()} blocked) in the last ${windowDays} day(s).`,
+        generatedAt: new Date().toISOString(),
+        trafficSummary: {
+          totalCalls,
+          blocked,
+          passed: totalCalls - blocked,
+          blockRate,
+          topRule: topRule?.[0] ?? null,
+          topRuleCount: topRule?.[1] ?? 0,
+        },
+        sections: [
+          {
+            title: 'Traffic (live DB)',
+            bullets: [
+              `${totalCalls} tool calls in the selected window`,
+              `${blocked} blocked (${blockRate}% block rate)`,
+              topRule
+                ? `Top rule: ${topRule[0]} (${topRule[1]} blocks)`
+                : 'No block rules recorded',
+            ],
+          },
+        ],
+        actions: [],
+      });
+    } catch (err) {
+      res.status(500).json({ error: String(err) });
+    }
+  });
+
   // ── GET /api/security-swarm/tool-integrity ────────────────────────────────
   app.get('/api/security-swarm/tool-integrity', (_req: Request, res: Response) => {
     res.json({ available: false, reason: 'Run security-swarm to generate tool integrity report' });

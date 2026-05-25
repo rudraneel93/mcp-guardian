@@ -3,7 +3,7 @@
   "private": true,
   "version": "2.8.2",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p ${PORT:-3000}",
     "build": "next build",
     "start": "next start",
     "lint": "tsc --noEmit"

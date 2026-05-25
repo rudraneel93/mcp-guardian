@@ -440,6 +440,30 @@ export function resolveApiBase(): string {
   return '';
 }
 
+/** True when the UI should use the proxy WebSocket on a different host (e.g. :4000). */
+export function usesProxyWebSocket(): boolean {
+  const base = resolveApiBase();
+  if (!base || typeof window === 'undefined') return false;
+  try {
+    return new URL(base).origin !== window.location.origin;
+  } catch {
+    return true;
+  }
+}
+
+/** Same-origin SSE stream from soc-api-server (`GET /api/sse`). */
+export function resolveSseUrl(): string {
+  const base = resolveApiBase();
+  try {
+    const origin =
+      base || (typeof window !== 'undefined' ? window.location.origin : '');
+    if (!origin) return '/api/sse';
+    return new URL('/api/sse', origin).toString();
+  } catch {
+    return '/api/sse';
+  }
+}
+
 export function getTenantId(): string {
   if (typeof window === 'undefined') return 'default';
   return sessionStorage.getItem(TENANT_STORAGE_KEY) || 'default';
@@ -1560,16 +1584,16 @@ export async function fetchServerRegistry(): Promise<ServerRegistryEntry[]> {
   return body.servers || [];
 }
 
-export function resolveWsUrl(): string {
+export function resolveWsUrl(): string | null {
+  if (!usesProxyWebSocket()) return null;
   const base = resolveApiBase();
   try {
-    const origin = base || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:4000');
-    const u = new URL('/ws', origin);
+    const u = new URL('/ws', base);
     u.protocol = u.protocol === 'https:' ? 'wss:' : 'ws:';
     const tenant = getTenantId();
     if (tenant) u.searchParams.set('tenant', tenant);
     return u.toString();
   } catch {
-    return 'ws://localhost:4000/ws';
+    return null;
   }
 }

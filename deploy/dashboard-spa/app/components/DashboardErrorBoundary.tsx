@@ -27,8 +27,9 @@ export class DashboardErrorBoundary extends Component<Props, State> {
             Dashboard error: {this.state.error.message}
           </p>
           <p className="events-empty">
-            Start the proxy with <code>DASHBOARD_ENABLED=true</code> on port 4000, or set{' '}
-            <code>?apiBase=http://localhost:4000</code> when previewing elsewhere.
+            Run <code>pnpm serve</code> for the live SOC dashboard (UI :3000, API :4040), or start
+            the proxy with <code>DASHBOARD_ENABLED=true</code> and set{' '}
+            <code>?apiBase=http://localhost:4000</code> when the UI is on another host.
           </p>
         </main>
       );

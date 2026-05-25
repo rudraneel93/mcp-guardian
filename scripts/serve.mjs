@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SPA_ROOT = join(ROOT, 'deploy', 'dashboard-spa');
-const SOC_COMPONENT = join(SPA_ROOT, 'app', 'components', 'GuardianSOCDashboard.tsx');
+const LIVE_DASHBOARD = join(SPA_ROOT, 'app', 'components', 'DashboardClient.tsx');
 
 function run(cmd, args, opts = {}) {
   return spawnSync(cmd, args, { cwd: opts.cwd ?? ROOT, stdio: 'inherit', ...opts });
@@ -25,11 +25,8 @@ function killPort(port) {
   });
 }
 
-if (!existsSync(SOC_COMPONENT)) {
-  console.error(
-    '[serve] GuardianSOCDashboard not found. Merge branch dashboard-v3 or pull latest:\n' +
-      '  git fetch origin dashboard-v3 && git merge origin/dashboard-v3',
-  );
+if (!existsSync(LIVE_DASHBOARD)) {
+  console.error('[serve] DashboardClient not found — pull latest dashboard-spa.');
   process.exit(1);
 }
 
@@ -55,8 +52,8 @@ killPort(4000);
 process.env.SOC_API_PORT = process.env.SOC_API_PORT || '4040';
 process.env.GUARDIAN_CI_BYPASS_LICENSE = process.env.GUARDIAN_CI_BYPASS_LICENSE ?? 'true';
 
-console.log('[serve] Guardian SOC Dashboard');
-console.log('[serve]   UI:  http://localhost:3000/  (GuardianSOCDashboard + Tailwind)');
+console.log('[serve] Guardian SOC Dashboard (live API only)');
+console.log('[serve]   UI:  http://localhost:3000/  (DashboardClient → /api proxied to SOC API)');
 console.log('[serve]   API: http://localhost:4040/  (soc-api-server → ~/.mcp-guardian DB)');
 console.log('[serve] Press Ctrl+C to stop both processes.\n');
 
@@ -69,7 +66,7 @@ const child = spawn(
   {
     cwd: ROOT,
     stdio: 'inherit',
-    env: { ...process.env, FORCE_COLOR: '1' },
+    env: { ...process.env, FORCE_COLOR: '1', PORT: '3000' },
   },
 );
 

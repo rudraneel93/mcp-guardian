@@ -123,7 +123,7 @@ export function SetupPanel({ onGoToAgentFlow }: Props) {
               <CopyButton text={status.commands.dashboardProxy} label="Copy command" />
               <a
                 className="linkish"
-                href="http://localhost:4000"
+                href="http://localhost:3000"
                 target="_blank"
                 rel="noopener noreferrer"
               >

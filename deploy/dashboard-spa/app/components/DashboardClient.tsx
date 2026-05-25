@@ -157,7 +157,7 @@ export function DashboardClient() {
           pollFailuresRef.current = 0;
           setApiUnreachable(false);
           applyStatus(
-            'Dashboard API connected — no proxy history DB (use pnpm dashboard:proxy for live metrics)',
+            'SOC API connected — no traffic in history DB yet (run MCP proxy to record calls)',
             false,
           );
         } else {
@@ -166,7 +166,7 @@ export function DashboardClient() {
             setApiUnreachable(true);
             if (!ws.connected) {
               applyStatus(
-                'API unavailable — check DASHBOARD_ENABLED on :4000, auth, or rate limit (429)',
+                'API unavailable — run pnpm serve (SOC API :4040) or pnpm dashboard:proxy (:4000)',
                 true,
               );
             }
@@ -181,7 +181,7 @@ export function DashboardClient() {
       pollFailuresRef.current = 0;
       setApiUnreachable(false);
       if (!ws.connected) {
-        applyStatus('Connected — live data from proxy history DB', false);
+        applyStatus('Connected — live data from Guardian history DB', false);
       } else {
         applyStatus(ws.statusText, ws.statusIsError);
       }
@@ -436,12 +436,10 @@ export function DashboardClient() {
 function MotionlessBanner() {
   return (
     <div className="banner" role="status">
-      Guardian API not reachable (or rate-limited). Run the proxy with{' '}
-      <code>DASHBOARD_ENABLED=true</code> on port 4000, restart after{' '}
-      <code>pnpm dashboard:build</code>, or set{' '}
-      <code>?apiBase=http://localhost:4000</code> (and <code>apiKey=</code> if required). If you
-      see HTTP 429 in the network tab, refresh after a minute or raise{' '}
-      <code>GUARDIAN_DASHBOARD_API_RATE_LIMIT</code>.
+      Guardian API not reachable. Start <code>pnpm serve</code> (UI :3000, SOC API :4040 with{' '}
+      <code>/api</code> proxied), or run the MCP proxy with <code>DASHBOARD_ENABLED=true</code> on
+      port 4000 and set <code>?apiBase=http://localhost:4000</code> if the UI is hosted elsewhere.
+      If you see HTTP 429, wait and retry or raise <code>GUARDIAN_DASHBOARD_API_RATE_LIMIT</code>.
     </div>
   );
 }
