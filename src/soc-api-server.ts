@@ -1309,6 +1309,7 @@ export async function startSocApiServer(port = 4040): Promise<void> {
         },
         sections: [
           {
+            id: 'traffic-live-db',
             title: 'Traffic (live DB)',
             bullets: [
               `${totalCalls} tool calls in the selected window`,

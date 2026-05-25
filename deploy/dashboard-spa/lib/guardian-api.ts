@@ -247,7 +247,7 @@ export type PlainEnglishReport = {
   headline?: string;
   generatedAt?: string;
   sections?: Array<{
-    id: string;
+    id?: string;
     title: string;
     markdown?: string;
     bullets?: string[];
