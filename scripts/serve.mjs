@@ -8,6 +8,7 @@
  */
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -47,14 +48,17 @@ try {
 
 killPort(3000);
 killPort(4040);
-killPort(4000);
+// Do not kill :4000 — a live MCP proxy may be running alongside this stack.
 
 process.env.SOC_API_PORT = process.env.SOC_API_PORT || '4040';
 process.env.GUARDIAN_CI_BYPASS_LICENSE = process.env.GUARDIAN_CI_BYPASS_LICENSE ?? 'true';
+process.env.MCP_GUARDIAN_DB_PATH =
+  process.env.MCP_GUARDIAN_DB_PATH || join(homedir(), '.mcp-guardian', 'history.db');
 
 console.log('[serve] Guardian SOC Dashboard (live API only)');
 console.log('[serve]   UI:  http://localhost:3000/  (DashboardClient → /api proxied to SOC API)');
-console.log('[serve]   API: http://localhost:4040/  (soc-api-server → ~/.mcp-guardian DB)');
+console.log('[serve]   API: http://localhost:4040/  (soc-api-server)');
+console.log(`[serve]   DB:  ${process.env.MCP_GUARDIAN_DB_PATH}`);
 console.log('[serve] Press Ctrl+C to stop both processes.\n');
 
 const child = spawn(

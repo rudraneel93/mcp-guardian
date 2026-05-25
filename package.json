@@ -113,6 +113,7 @@
     "real-life:continuous": "node scenarios/real-life/run-continuous-live-attack.mjs",
     "verify:corpus": "bash scripts/verify-corpus-parity.sh",
     "serve": "node scripts/serve.mjs",
+    "live:test": "sh scripts/run-live-test-stack.sh",
     "dashboard:build": "npm run build --prefix deploy/dashboard-spa",
     "dashboard:serve": "node scripts/serve.mjs",
     "dashboard:proxy": "sh scripts/start-dashboard-proxy.sh",
