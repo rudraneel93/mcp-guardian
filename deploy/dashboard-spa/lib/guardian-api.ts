@@ -493,14 +493,24 @@ export async function guardianFetch(
   const base = resolveApiBase();
   const normalized = path.startsWith('/') ? path : `/${path}`;
   const url = path.startsWith('http') ? path : base ? `${base}${normalized}` : normalized;
-  return fetch(url, {
-    credentials: 'include',
-    ...init,
-    headers: {
-      ...buildAuthHeaders(),
-      ...(init?.headers as GuardianHeaders),
-    },
-  });
+  try {
+    return await fetch(url, {
+      credentials: 'include',
+      ...init,
+      headers: {
+        ...buildAuthHeaders(),
+        ...(init?.headers as GuardianHeaders),
+      },
+    });
+  } catch (err) {
+    // Browser throws TypeError "Failed to fetch" when API is down or unreachable
+    const message = err instanceof Error ? err.message : 'Network error';
+    return new Response(JSON.stringify({ error: message, available: false }), {
+      status: 503,
+      statusText: 'Service Unavailable',
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
 }
 
 export async function fetchAuthStatus(): Promise<AuthStatus> {

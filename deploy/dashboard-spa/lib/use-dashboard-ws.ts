@@ -321,9 +321,13 @@ export function useDashboardWs(enabled: boolean, sessionKey: number): DashboardW
     let cancelled = false;
 
     const poll = async () => {
-      const st = await fetchSwarmStatus();
-      if (cancelled || !st) return;
-      syncSwarmJobStatus(st);
+      try {
+        const st = await fetchSwarmStatus();
+        if (cancelled || !st) return;
+        syncSwarmJobStatus(st);
+      } catch {
+        /* API offline — REST poll resumes when back */
+      }
     };
 
     void poll();
