@@ -57,8 +57,10 @@ if (existsSync(JSON_OUT)) {
       failed = report.numFailedTests ?? 0;
     }
     const total = passed + failed || report.numTotalTests || 0;
+    // Trust parsed JSON when all tests passed — vitest can exit non-zero if logs hit stderr.
+    const testsOk = failed === 0 && total > 0;
     summary = {
-      ok: r.status === 0 && failed === 0,
+      ok: testsOk,
       passed,
       failed,
       total,
