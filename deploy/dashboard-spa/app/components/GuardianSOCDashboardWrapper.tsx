@@ -1,10 +1,8 @@
 'use client';
 
-import { GuardianDashboard } from './v2/GuardianDashboard';
+import { DashboardClient } from './DashboardClient';
 
-/**
- * Legacy export — routes use GuardianDashboard v2 (live `/api/*` + SSE).
- */
+/** Legacy export — full live dashboard (all API-backed panels). */
 export function GuardianSOCDashboardWrapper() {
-  return <GuardianDashboard />;
+  return <DashboardClient />;
 }

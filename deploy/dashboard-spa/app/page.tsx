@@ -1,10 +1,10 @@
 import { DashboardErrorBoundary } from './components/DashboardErrorBoundary';
-import { GuardianDashboard } from './components/v2/GuardianDashboard';
+import { DashboardClient } from './components/DashboardClient';
 
 export default function DashboardPage() {
   return (
     <DashboardErrorBoundary>
-      <GuardianDashboard />
+      <DashboardClient />
     </DashboardErrorBoundary>
   );
 }

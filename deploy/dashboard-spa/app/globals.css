@@ -1217,3 +1217,149 @@ html, body {
   border-radius: 8px;
   border: 1px solid var(--border);
 }
+
+/* ── Live dashboard (DashboardClient) — mobile + full API tabs ───────────── */
+.dashboard-live-root {
+  min-height: 100dvh;
+  padding: 0 16px 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.dashboard-live-root > header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  padding: 12px 0 8px;
+  background: rgba(6, 9, 14, 0.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border-dim);
+  margin-bottom: 8px;
+}
+
+.dashboard-live-root > header h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.15rem;
+  color: var(--text-bright);
+}
+
+.dashboard-live-root .subtitle {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.dashboard-live-root .status {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.dashboard-live-root .status-error {
+  color: var(--red);
+}
+
+.dashboard-live-root .hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 8px 0;
+}
+
+.dashboard-live-root .banner {
+  padding: 12px 14px;
+  margin: 12px 0;
+  border-radius: 8px;
+  border: 1px solid var(--amber);
+  background: var(--amber-dim);
+  color: var(--amber);
+  font-size: 0.85rem;
+}
+
+.dashboard-live-root nav.tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 8px 0 12px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--border-dim);
+}
+
+.dashboard-live-root nav.tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.dashboard-live-root nav.tabs .tab {
+  flex-shrink: 0;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--navy-card);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  min-height: 40px;
+}
+
+.dashboard-live-root nav.tabs .tab.active {
+  color: var(--cyan);
+  border-color: var(--cyan-glow);
+  background: var(--cyan-dim);
+}
+
+.dashboard-live-root .btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.dashboard-live-root button.primary,
+.dashboard-live-root .gd-btn {
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--cyan-glow);
+  background: var(--cyan-dim);
+  color: var(--cyan);
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.dashboard-live-root button.secondary,
+.dashboard-live-root .secondary {
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--navy-card);
+  color: var(--text);
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.dashboard-live-root .data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.dashboard-live-root .data-table th,
+.dashboard-live-root .data-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-dim);
+  text-align: left;
+}
+
+.dashboard-live-root .table-wrap,
+.dashboard-live-root .gd-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (min-width: 900px) {
+  .dashboard-live-root nav.tabs {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+}

@@ -247,6 +247,17 @@ export function DashboardClient() {
     });
   }, [ws.auditPatch]);
 
+  /** After swarm/analysis completes, reload every REST dataset (metrics, audit, swarm artifacts, visuals). */
+  useEffect(() => {
+    if (!ready || ws.swarmDoneTick <= 0) return;
+    void refreshAll();
+  }, [ready, ws.swarmDoneTick, refreshAll]);
+
+  useEffect(() => {
+    if (!ready || ws.aiRefreshTick <= 0) return;
+    void refreshAll();
+  }, [ready, ws.aiRefreshTick, refreshAll]);
+
   const onFpReject = async (rule: string, pattern: string) => {
     if (!hasPermission(roles, 'policy_mutate')) {
       setActionMsg('Requires operator role for FP reject');
@@ -271,7 +282,7 @@ export function DashboardClient() {
     <DashboardWindowProvider>
     <DashboardRegionProvider>
     <VisualsProvider refreshKey={refreshTick} pollMs={REST_POLL_MS}>
-    <main>
+    <main className="dashboard-live-root">
       <header>
         <h1>MCP Guardian</h1>
         <p className={statusIsError ? 'status status-error' : 'status'} suppressHydrationWarning>

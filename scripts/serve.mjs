@@ -27,7 +27,7 @@ function killPort(port) {
 }
 
 if (!existsSync(LIVE_DASHBOARD)) {
-  console.error('[serve] DashboardClient not found — pull latest dashboard-spa.');
+  console.error('[serve] GuardianDashboard (v2) not found — pull latest dashboard-spa.');
   process.exit(1);
 }
 
@@ -56,7 +56,7 @@ process.env.MCP_GUARDIAN_DB_PATH =
   process.env.MCP_GUARDIAN_DB_PATH || join(homedir(), '.mcp-guardian', 'history.db');
 
 console.log('[serve] Guardian SOC Dashboard (live API only)');
-console.log('[serve]   UI:  http://localhost:3000/  (DashboardClient → /api proxied to SOC API)');
+console.log('[serve]   UI:  http://localhost:3000/  (GuardianDashboard v2 → /api proxied to SOC API)');
 console.log('[serve]   API: http://localhost:4040/  (soc-api-server)');
 console.log(`[serve]   DB:  ${process.env.MCP_GUARDIAN_DB_PATH}`);
 console.log('[serve] Press Ctrl+C to stop both processes.\n');

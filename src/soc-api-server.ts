@@ -25,6 +25,7 @@ import { resolveMcpServerDbPath } from './utils/guardian-db-path.js';
 import { Logger } from './utils/logger.js';
 import type { IDatabase } from './database/database-interface.js';
 import type { McpServerConfig, SecurityReport, CostReport, HealthReport, ProxyCallRecord } from './types.js';
+import { DEFAULT_TENANT_ID } from './tenant/resolve-tenant.js';
 
 // ── Types for API responses (matching guardian-api.ts in dashboard-spa) ─────
 
@@ -1169,10 +1170,17 @@ export async function startSocApiServer(port = 4040): Promise<void> {
     }
   });
 
-  // ── GET /api/security-swarm/traffic-summary — live DB (no static JSON) ───
+  // ── GET /api/security-swarm/traffic-summary — swarm artifact, else live DB ───
   app.get('/api/security-swarm/traffic-summary', async (req: Request, res: Response) => {
     const windowDays = parseInt(String(req.query['window'] ?? '7'), 10);
     try {
+      const { readTrafficSummary } = await import('./utils/swarm-artifacts.js');
+      const artifact = readTrafficSummary();
+      if (artifact) {
+        res.json(artifact);
+        return;
+      }
+
       const serverNames = await db.getDistinctActiveServers();
       const allRecords = await getAllCallRecords(db, serverNames, windowDays);
 
@@ -1249,9 +1257,16 @@ export async function startSocApiServer(port = 4040): Promise<void> {
     }
   });
 
-  // ── GET /api/security-swarm/user-servers — configs on disk (live probe list) ─
+  // ── GET /api/security-swarm/user-servers — session artifact, else configured list ─
   app.get('/api/security-swarm/user-servers', async (_req: Request, res: Response) => {
     try {
+      const { readUserServersSession } = await import('./utils/swarm-artifacts.js');
+      const session = readUserServersSession();
+      if (session) {
+        res.json(session);
+        return;
+      }
+
       const servers = await loadServers();
       const entries = servers.map((s) => ({
         serverName: s.name,
@@ -1275,10 +1290,17 @@ export async function startSocApiServer(port = 4040): Promise<void> {
     }
   });
 
-  // ── GET /api/security-swarm/report-json — plain English from live traffic ───
+  // ── GET /api/security-swarm/report-json — swarm report.json, else live traffic summary ───
   app.get('/api/security-swarm/report-json', async (req: Request, res: Response) => {
     const windowDays = parseInt(String(req.query['window'] ?? '7'), 10);
     try {
+      const { ensurePlainEnglishReport } = await import('./utils/swarm-artifacts.js');
+      const swarmReport = ensurePlainEnglishReport();
+      if (swarmReport) {
+        res.json(swarmReport);
+        return;
+      }
+
       const serverNames = await db.getDistinctActiveServers();
       const allRecords = await getAllCallRecords(db, serverNames, windowDays);
       if (allRecords.length === 0) {
@@ -1328,8 +1350,19 @@ export async function startSocApiServer(port = 4040): Promise<void> {
   });
 
   // ── GET /api/security-swarm/tool-integrity ────────────────────────────────
-  app.get('/api/security-swarm/tool-integrity', (_req: Request, res: Response) => {
-    res.json({ available: false, reason: 'Run security-swarm to generate tool integrity report' });
+  app.get('/api/security-swarm/tool-integrity', async (_req: Request, res: Response) => {
+    try {
+      const { getEffectiveSwarmDir } = await import('./tenant/swarm-tenant-paths.js');
+      const { existsSync, readFileSync } = await import('fs');
+      const { join } = await import('path');
+      const reportPath = join(getEffectiveSwarmDir(DEFAULT_TENANT_ID), 'tool-watch.json');
+      if (existsSync(reportPath)) {
+        const report = JSON.parse(readFileSync(reportPath, 'utf-8')) as Record<string, unknown>;
+        res.json({ available: true, hasData: true, ...report });
+        return;
+      }
+    } catch { /* fall through */ }
+    res.json({ available: false, hasData: false, reason: 'Run SWARM_TOOL_WATCH=true security-swarm for tool integrity' });
   });
 
   // ── GET /api/security-swarm/shadow-red-team ───────────────────────────────
@@ -1521,6 +1554,237 @@ export async function startSocApiServer(port = 4040): Promise<void> {
     res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="guardian-briefing-${scope}-${windowDays}d.md"`);
     res.send(`# MCP Guardian Briefing — ${scope} (${windowDays}d)\n\nGenerated: ${new Date().toISOString()}\n`);
+  });
+
+  // ── Swarm artifacts + visuals (parity with dashboard-server / legacy UI) ───
+  app.get('/api/security-swarm/figures', async (_req: Request, res: Response) => {
+    const { readFiguresManifest } = await import('./utils/swarm-artifacts.js');
+    const manifest = readFiguresManifest();
+    res.json({
+      generatedAt: manifest.generatedAt ?? null,
+      figures: manifest.figures ?? [],
+    });
+  });
+
+  app.get('/api/security-swarm/summary', async (_req: Request, res: Response) => {
+    const { readSwarmSummaryMd } = await import('./utils/swarm-artifacts.js');
+    const md = readSwarmSummaryMd();
+    if (!md) {
+      res.status(404).json({ error: 'summary.md not found — run analysis first' });
+      return;
+    }
+    res.type('text/markdown').send(md);
+  });
+
+  app.get('/api/security-swarm/report', async (_req: Request, res: Response) => {
+    const { readAnalysisReport } = await import('./utils/security-swarm-runner.js');
+    const report = readAnalysisReport();
+    if (!report.ok || !report.text) {
+      res.status(404).json({ error: report.error || 'Report not ready' });
+      return;
+    }
+    res.type('text/plain').send(report.text);
+  });
+
+  app.get('/api/security-swarm/report/download', async (_req: Request, res: Response) => {
+    const { readAnalysisReport } = await import('./utils/security-swarm-runner.js');
+    const report = readAnalysisReport();
+    if (!report.ok || !report.text) {
+      res.status(404).json({ error: report.error || 'Report not ready' });
+      return;
+    }
+    res.setHeader('Content-Disposition', 'attachment; filename="mcp-guardian-swarm-analysis.txt"');
+    res.type('text/plain').send(report.text);
+  });
+
+  app.get('/api/security-swarm/threat-lab-candidates', async (_req: Request, res: Response) => {
+    const { readThreatLabCandidates } = await import('./utils/swarm-artifacts.js');
+    const data = readThreatLabCandidates();
+    if (!data) {
+      res.status(404).json({ error: 'threat-lab-candidates.json not found' });
+      return;
+    }
+    res.json(data);
+  });
+
+  app.post('/api/security-swarm/threat-lab-candidates/accept', async (req: Request, res: Response) => {
+    const id = String((req.body as { id?: string })?.id ?? '');
+    const { markThreatLabCandidate } = await import('./utils/swarm-artifacts.js');
+    if (!markThreatLabCandidate(undefined, id, 'accepted')) {
+      res.status(404).json({ error: 'Candidate not found' });
+      return;
+    }
+    res.json({ status: 'accepted', id });
+  });
+
+  app.post('/api/security-swarm/threat-lab-candidates/reject', async (req: Request, res: Response) => {
+    const id = String((req.body as { id?: string })?.id ?? '');
+    const { markThreatLabCandidate } = await import('./utils/swarm-artifacts.js');
+    if (!markThreatLabCandidate(undefined, id, 'rejected')) {
+      res.status(404).json({ error: 'Candidate not found' });
+      return;
+    }
+    res.json({ status: 'rejected', id });
+  });
+
+  app.get('/api/security-swarm/auto-corpus', async (_req: Request, res: Response) => {
+    const { readAutoCorpusManifest } = await import('./utils/swarm-artifacts.js');
+    const data = readAutoCorpusManifest();
+    if (!data) {
+      res.status(404).json({ error: 'auto-corpus-manifest.json not found' });
+      return;
+    }
+    res.json(data);
+  });
+
+  app.get('/api/security-swarm/live-session', async (_req: Request, res: Response) => {
+    const { readLiveFilesystemSession } = await import('./utils/swarm-artifacts.js');
+    const live = readLiveFilesystemSession();
+    if (!live) {
+      res.status(404).json({ error: 'No live session from current analysis' });
+      return;
+    }
+    res.json(live);
+  });
+
+  app.get('/api/visuals/live', async (req: Request, res: Response) => {
+    const windowDays = parseInt(String(req.query['window'] ?? '7'), 10);
+    try {
+      const { writeVisualsData } = await import('./utils/export-visuals-data.js');
+      const data = await writeVisualsData({ historyDb: db, windowDays });
+      res.json({ available: true, ...data });
+    } catch (err) {
+      Logger.error(`[soc-api] /api/visuals/live failed: ${err}`);
+      res.status(500).json({
+        available: false,
+        error: err instanceof Error ? err.message : 'Failed to load visuals data',
+      });
+    }
+  });
+
+  app.get('/api/threat-discovery/status', async (_req: Request, res: Response) => {
+    try {
+      const { buildThreatDiscoveryStatus } = await import('./utils/threat-discovery-status.js');
+      res.json(await buildThreatDiscoveryStatus(DEFAULT_TENANT_ID));
+    } catch (err) {
+      res.status(500).json({ error: String(err) });
+    }
+  });
+
+  app.get('/api/ai/state', async (_req: Request, res: Response) => {
+    try {
+      const { getAiEngine } = await import('./ai/suggestion-engine.js');
+      const engine = getAiEngine();
+      if (engine) {
+        const s = engine.getSelfImprovement().getState();
+        res.json({
+          available: true,
+          initialized: true,
+          state: {
+            adaptiveThreshold: s.adaptiveThreshold,
+            truePositiveRate: s.truePositiveRate,
+            falsePositiveRate: s.falsePositiveRate,
+            moduleWeights: s.moduleWeights,
+            lastUpdated: s.lastUpdated ?? null,
+          },
+        });
+        return;
+      }
+      const { resolveAiLearningStatePath } = await import('./ai/ai-paths.js');
+      const { existsSync, readFileSync } = await import('fs');
+      const statePath = resolveAiLearningStatePath();
+      if (existsSync(statePath)) {
+        const s = JSON.parse(readFileSync(statePath, 'utf-8')) as Record<string, unknown>;
+        res.json({ available: true, initialized: true, state: s });
+        return;
+      }
+    } catch { /* fall through */ }
+    res.json({ available: false, initialized: false, state: null, reason: 'AI engine not initialized' });
+  });
+
+  app.get('/api/ai/report', async (_req: Request, res: Response) => {
+    try {
+      const { getAiEngine } = await import('./ai/suggestion-engine.js');
+      const engine = getAiEngine();
+      if (engine) {
+        const report = await engine.generateReport();
+        res.json({ available: true, report });
+        return;
+      }
+    } catch { /* fall through */ }
+    res.json({ available: false, report: null, reason: 'AI engine not initialized' });
+  });
+
+  app.get('/api/ai/baselines', async (_req: Request, res: Response) => {
+    try {
+      const { getAiEngine } = await import('./ai/suggestion-engine.js');
+      const engine = getAiEngine();
+      if (engine) {
+        res.json({ available: true, baselines: engine.getBaselineLearner().getAllBaselines() });
+        return;
+      }
+      const { resolveAiBaselinesPath } = await import('./ai/ai-paths.js');
+      const { existsSync, readFileSync } = await import('fs');
+      const bp = resolveAiBaselinesPath();
+      if (existsSync(bp)) {
+        const raw = JSON.parse(readFileSync(bp, 'utf-8')) as { baselines?: unknown[] };
+        res.json({ available: true, baselines: raw.baselines ?? [] });
+        return;
+      }
+    } catch { /* fall through */ }
+    res.json({ available: false, baselines: [], reason: 'No baselines learned yet' });
+  });
+
+  app.get('/api/ai/threats', async (_req: Request, res: Response) => {
+    try {
+      const { getAiEngine } = await import('./ai/suggestion-engine.js');
+      const { startThreatIntelPollingIfEnabled } = await import('./ai/threat-intel.js');
+      const engine = getAiEngine();
+      const threatIntel = engine?.getThreatIntel() ?? startThreatIntelPollingIfEnabled();
+      res.json(threatIntel.getStatus());
+    } catch {
+      res.json({
+        threats: 0,
+        knownIds: [],
+        entries: [],
+        updated: null,
+        lastPollAt: null,
+        pollingActive: false,
+        pollingDisabled: process.env['GUARDIAN_AI_DISABLE_THREAT_POLL'] === 'true',
+      });
+    }
+  });
+
+  app.post('/api/ai/threats/poll', async (_req: Request, res: Response) => {
+    try {
+      const { getAiEngine } = await import('./ai/suggestion-engine.js');
+      const { startThreatIntelPollingIfEnabled } = await import('./ai/threat-intel.js');
+      const engine = getAiEngine();
+      const threatIntel = engine?.getThreatIntel() ?? startThreatIntelPollingIfEnabled();
+      await threatIntel.pollLiveFeeds();
+      res.json(threatIntel.getStatus());
+    } catch (err) {
+      res.status(500).json({ error: err instanceof Error ? err.message : 'Threat intel poll failed' });
+    }
+  });
+
+  app.get('/api/learning/semantic/outcomes', async (_req: Request, res: Response) => {
+    try {
+      const { loadSemanticAuditRecordsAsync } = await import('./ai/semantic-audit-store.js');
+      const { isSemanticAsyncEnabledForTenant } = await import('./tenant/tenant-semantic-config.js');
+      const sinceMs = 30 * 24 * 60 * 60 * 1000;
+      const records = await loadSemanticAuditRecordsAsync({ limit: 200, sinceMs });
+      res.json({
+        records,
+        total: records.length,
+        meta: {
+          asyncEnabled: isSemanticAsyncEnabledForTenant(DEFAULT_TENANT_ID),
+          hint: records.length === 0 ? 'No semantic audit records in store yet' : undefined,
+        },
+      });
+    } catch (err) {
+      res.status(500).json({ records: [], total: 0, error: String(err) });
+    }
   });
 
   // ── GET /health ────────────────────────────────────────────────────────────
