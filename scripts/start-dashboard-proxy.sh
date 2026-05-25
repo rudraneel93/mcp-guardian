@@ -14,9 +14,11 @@ elif [ ! -f dist/utils/dashboard-server.js ] \
 fi
 
 if [ ! -f deploy/dashboard-spa/out/index.html ]; then
-  echo "[dashboard-proxy] Building dashboard SPA…" >&2
+  echo "[dashboard-proxy] Building SOC dashboard SPA (pnpm dashboard:build)…" >&2
   pnpm dashboard:build
 fi
+export GUARDIAN_DASHBOARD_SPA="${GUARDIAN_DASHBOARD_SPA:-true}"
+export GUARDIAN_DASHBOARD_LEGACY="${GUARDIAN_DASHBOARD_LEGACY:-false}"
 
 # Stop standalone dashboard:serve if it holds :4000
 if command -v lsof >/dev/null 2>&1; then

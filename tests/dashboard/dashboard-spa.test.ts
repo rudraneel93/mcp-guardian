@@ -61,11 +61,19 @@ describe('dashboard-spa', () => {
     expect(client).toContain('EnterpriseAiPanel');
   });
 
-  it('keeps legacy static fallback when Next export is not built', () => {
-    const legacyIndex = join(SPA_ROOT, 'index.html');
+  it('keeps legacy static assets for opt-in GUARDIAN_DASHBOARD_LEGACY only', () => {
+    const legacyIndex = join(SPA_ROOT, 'index.legacy.html');
     const legacyJs = join(SPA_ROOT, 'app.js');
     expect(existsSync(legacyIndex)).toBe(true);
     expect(existsSync(legacyJs)).toBe(true);
+    expect(existsSync(join(SPA_ROOT, 'package.json'))).toBe(true);
+  });
+
+  it('documents pnpm serve for SOC static export', () => {
+    const pkg = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf-8')) as {
+      scripts?: Record<string, string>;
+    };
+    expect(pkg.scripts?.serve).toContain('scripts/serve.mjs');
   });
 
   it('static export exists after dashboard:build', () => {
