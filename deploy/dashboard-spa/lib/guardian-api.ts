@@ -210,6 +210,7 @@ export type AiSuggestion = {
 export type PolicyInfo = {
   mode: string;
   rules: string;
+  ruleCount?: number;
   yaml?: string;
   path?: string;
 };
@@ -1079,6 +1080,74 @@ export async function pollAiThreats(): Promise<{ ok: boolean; status?: ThreatInt
   if (!res.ok) return { ok: false, error: await parseApiError(res) };
   const status = (await res.json()) as ThreatIntelStatus;
   return { ok: true, status };
+}
+
+export type AiLearningCycleResult = {
+  ok: boolean;
+  error?: string;
+  suggestionCount?: number;
+  autoAppliedCount?: number;
+  insightCount?: number;
+  report?: Record<string, unknown>;
+};
+
+export async function runAiLearningCycle(): Promise<AiLearningCycleResult> {
+  const headers = await buildMutatingHeaders();
+  const res = await guardianFetch('/api/ai/learning/cycle', { method: 'POST', headers, body: '{}' });
+  const body = (await res.json().catch(() => ({}))) as AiLearningCycleResult & { error?: string };
+  if (!res.ok) return { ok: false, error: body.error || (await parseApiError(res)) };
+  return body;
+}
+
+export type PromotionStats = {
+  enabled: boolean;
+  dailyQuota: { used: number; max: number };
+  totalPromoted: number;
+  byCategory?: Record<string, number>;
+  lastPromotionAt: string | null;
+  error?: string;
+};
+
+export async function fetchPromotionStats(): Promise<PromotionStats> {
+  const res = await guardianFetch('/api/threat-discovery/promote/stats');
+  if (!res.ok) {
+    return {
+      enabled: false,
+      dailyQuota: { used: 0, max: 0 },
+      totalPromoted: 0,
+      lastPromotionAt: null,
+      error: await parseApiError(res),
+    };
+  }
+  return (await res.json()) as PromotionStats;
+}
+
+export type ThreatDiscoverySchedulerStatus = {
+  running: boolean;
+  lastRunAt: string | null;
+  totalRuns?: number;
+  lastRunOk?: boolean;
+  message?: string;
+};
+
+export async function fetchThreatDiscoverySchedulerStatus(): Promise<ThreatDiscoverySchedulerStatus> {
+  const res = await guardianFetch('/api/threat-discovery/scheduler/status');
+  if (!res.ok) {
+    return { running: false, lastRunAt: null, message: await parseApiError(res) };
+  }
+  return (await res.json()) as ThreatDiscoverySchedulerStatus;
+}
+
+export async function startThreatDiscoveryScheduler(): Promise<boolean> {
+  const headers = await buildMutatingHeaders();
+  const res = await guardianFetch('/api/threat-discovery/scheduler/start', { method: 'POST', headers, body: '{}' });
+  return res.ok;
+}
+
+export async function stopThreatDiscoveryScheduler(): Promise<boolean> {
+  const headers = await buildMutatingHeaders();
+  const res = await guardianFetch('/api/threat-discovery/scheduler/stop', { method: 'POST', headers, body: '{}' });
+  return res.ok;
 }
 
 export async function parseApiError(res: Response): Promise<string> {

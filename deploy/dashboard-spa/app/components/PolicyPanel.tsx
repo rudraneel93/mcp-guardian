@@ -103,6 +103,12 @@ export function PolicyPanel({ roles, lastBlocked, onAction, copilotInitialTab }:
       <h2>Policy studio</h2>
       <p className="hint">
         Mode: <strong>{policy?.mode ?? '—'}</strong>
+        {typeof policy?.ruleCount === 'number' ? (
+          <>
+            {' '}
+            · <strong>{policy.ruleCount}</strong> active rules
+          </>
+        ) : null}
         {policy?.path ? (
           <>
             {' '}

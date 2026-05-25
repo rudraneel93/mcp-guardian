@@ -38,6 +38,19 @@ describe('dashboard-spa', () => {
     expect(apiSrc).toMatch(/base \? `\$\{base\}\$\{normalized\}` : normalized/);
   });
 
+  it('includes SOC quick actions and learning cycle API client', () => {
+    const soc = join(SPA_ROOT, 'app', 'components', 'dashboard', 'SocQuickActions.tsx');
+    const api = join(SPA_ROOT, 'lib', 'guardian-api.ts');
+    expect(existsSync(soc)).toBe(true);
+    const apiSrc = readFileSync(api, 'utf-8');
+    expect(apiSrc).toContain('runAiLearningCycle');
+    expect(apiSrc).toContain('/api/ai/learning/cycle');
+    expect(apiSrc).toContain('fetchPromotionStats');
+    const client = readFileSync(join(SPA_ROOT, 'app', 'components', 'DashboardClient.tsx'), 'utf-8');
+    expect(client).toContain('SocQuickActions');
+    expect(client).toContain("'SOC / AI'");
+  });
+
   it('includes Enterprise AI panel for Tier 1/2 features', () => {
     const enterprise = join(SPA_ROOT, 'app', 'components', 'EnterpriseAiPanel.tsx');
     const lora = join(SPA_ROOT, 'app', 'components', 'TenantLoraPanel.tsx');

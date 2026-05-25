@@ -142,6 +142,28 @@ header h1 {
   font-size: 0.9rem;
 }
 
+.soc-quick-actions {
+  margin-bottom: 1.25rem;
+}
+
+.soc-quick-actions-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.soc-quick-actions-head h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.soc-quick-actions-row {
+  flex-wrap: wrap;
+}
+
 .subtitle {
   color: var(--muted);
   font-size: 0.85rem;

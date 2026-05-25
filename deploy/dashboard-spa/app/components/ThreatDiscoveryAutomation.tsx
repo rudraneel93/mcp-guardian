@@ -2,67 +2,46 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import {
+  fetchPromotionStats,
+  fetchThreatDiscoverySchedulerStatus,
   fetchThreatDiscoveryStatus,
+  runAutoThreatResearch,
+  runThreatLab,
+  startThreatDiscoveryScheduler,
+  stopThreatDiscoveryScheduler,
+  type PromotionStats,
+  type ThreatDiscoverySchedulerStatus,
   type ThreatDiscoveryStatus,
 } from '@/lib/guardian-api';
+import { hasPermission } from '@/lib/dashboard-roles';
 
-type AutomationState = {
-  schedulerRunning: boolean;
-  lastRunAt: string | null;
-  totalRuns: number;
-  lastRunOk: boolean;
-  pipelineHealth: {
-    queued: number;
-    writesThisHour: number;
-    maxPerHour: number;
-    enabled: boolean;
-    sources: Record<string, boolean>;
-  };
-  promotionStats: {
-    enabled: boolean;
-    totalPromoted: number;
-    dailyQuota: { used: number; max: number };
-    lastPromotionAt: string | null;
-  };
+type Props = {
+  roles?: string[];
+  onAction?: (msg: string) => void;
 };
 
-async function fetchSchedulerStatus(): Promise<AutomationState> {
-  const resp = await fetch('/api/threat-discovery/scheduler/status');
-  const data = await resp.json();
-  
-  // Fetch pipeline health from threat-discovery status
-  const tdResp = await fetch('/api/threat-discovery/status');
-  const tdData = await tdResp.json();
-  
-  // Fetch promotion stats
-  let promoStats = { enabled: false, totalPromoted: 0, dailyQuota: { used: 0, max: 5 }, lastPromotionAt: null };
-  try {
-    const promoResp = await fetch('/api/threat-discovery/promote/batch', { method: 'POST' });
-    const promoData = await promoResp.json();
-    if (!promoData.error) promoStats = promoData;
-  } catch {}
-
-  return {
-    schedulerRunning: data.running ?? false,
-    lastRunAt: data.lastRunAt ?? null,
-    totalRuns: data.totalRuns ?? 0,
-    lastRunOk: data.lastRunOk ?? false,
-    pipelineHealth: tdData?.pipelineHealth ?? { queued: 0, writesThisHour: 0, maxPerHour: 20, enabled: false, sources: {} },
-    promotionStats: promoStats,
-  };
-}
-
-export function ThreatDiscoveryAutomation() {
-  const [state, setState] = useState<AutomationState | null>(null);
+export function ThreatDiscoveryAutomation({ roles, onAction }: Props) {
+  const canRun = hasPermission(roles, 'policy_test');
+  const [scheduler, setScheduler] = useState<ThreatDiscoverySchedulerStatus | null>(null);
+  const [tdStatus, setTdStatus] = useState<ThreatDiscoveryStatus | null>(null);
+  const [promotionStats, setPromotionStats] = useState<PromotionStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [busy, setBusy] = useState<'threat-lab' | 'auto-research' | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const data = await fetchSchedulerStatus();
-      setState(data);
+      const [sched, td, promo] = await Promise.all([
+        fetchThreatDiscoverySchedulerStatus(),
+        fetchThreatDiscoveryStatus(),
+        fetchPromotionStats(),
+      ]);
+      setScheduler(sched);
+      setTdStatus(td.status);
+      if (td.error) setError(td.error);
+      setPromotionStats(promo);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load automation status');
     } finally {
@@ -70,200 +49,204 @@ export function ThreatDiscoveryAutomation() {
     }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
-  // Auto-refresh every 10 seconds
   useEffect(() => {
     const interval = setInterval(() => void load(), 10_000);
     return () => clearInterval(interval);
   }, [load]);
 
   const startScheduler = async () => {
-    await fetch('/api/threat-discovery/scheduler/start', { method: 'POST' });
+    if (!canRun) {
+      onAction?.('Requires operator role');
+      return;
+    }
+    await startThreatDiscoveryScheduler();
     void load();
   };
 
   const stopScheduler = async () => {
-    await fetch('/api/threat-discovery/scheduler/stop', { method: 'POST' });
+    if (!canRun) {
+      onAction?.('Requires operator role');
+      return;
+    }
+    await stopThreatDiscoveryScheduler();
     void load();
   };
 
-  if (loading && !state) {
+  if (loading && !scheduler) {
     return <p className="hint">Loading automation panel…</p>;
   }
 
-  if (error) {
+  if (error && !tdStatus) {
     return <p className="status status-error">{error}</p>;
   }
 
-  if (!state) return null;
-
-  const { schedulerRunning, pipelineHealth, promotionStats } = state;
+  const pipeline = tdStatus?.pipeline;
+  const llm = tdStatus?.llm;
+  const promo = promotionStats ?? {
+    enabled: false,
+    dailyQuota: { used: 0, max: 5 },
+    totalPromoted: 0,
+    lastPromotionAt: null,
+  };
 
   return (
     <section className="threat-discovery-automation" aria-label="Automation Panel">
       <h3>Threat Discovery Automation</h3>
       <p className="hint">
-        Configure automated threat research, LLM-driven discovery, and self-sustaining corpus growth.
+        Scheduler, pipeline health, and corpus promotion — all metrics from live dashboard APIs (no synthetic placeholders).
       </p>
 
-      {/* ── Scheduler Controls ────────────────────────────────────────── */}
       <div className="card">
         <h4>Continuous Pipeline</h4>
         <div className="row" style={{ gap: '1rem', marginTop: '0.5rem' }}>
           <div className="col" style={{ flex: 1 }}>
             <strong>Status:</strong>{' '}
-            <span className={schedulerRunning ? 'status-green' : 'status-gray'}>
-              {schedulerRunning ? '🟢 Running' : '⏸ Stopped'}
+            <span className={scheduler?.running ? 'status-green' : 'status-gray'}>
+              {scheduler?.running ? 'Running' : 'Stopped'}
             </span>
           </div>
           <div className="col" style={{ flex: 2 }}>
             <strong>Last run:</strong>{' '}
-            {state.lastRunAt
-              ? new Date(state.lastRunAt).toLocaleString()
-              : 'Never'}
-            {state.lastRunAt && (
-              <span className={state.lastRunOk ? 'status-green' : 'status-red'} style={{ marginLeft: '0.5rem' }}>
-                {state.lastRunOk ? '✓' : '✗'}
+            {scheduler?.lastRunAt ? new Date(scheduler.lastRunAt).toLocaleString() : 'Never'}
+            {scheduler?.lastRunAt != null && (
+              <span
+                className={scheduler.lastRunOk !== false ? 'status-green' : 'status-red'}
+                style={{ marginLeft: '0.5rem' }}
+              >
+                {scheduler.lastRunOk !== false ? 'ok' : 'failed'}
               </span>
             )}
           </div>
           <div className="col" style={{ flex: 1 }}>
-            <strong>Total:</strong> {state.totalRuns} runs
+            <strong>Total:</strong> {scheduler?.totalRuns ?? 0} runs
           </div>
         </div>
+        {scheduler?.message ? <p className="hint">{scheduler.message}</p> : null}
         <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem' }}>
           <button
             type="button"
             className="primary btn-sm"
-            onClick={startScheduler}
-            disabled={schedulerRunning}
+            onClick={() => void startScheduler()}
+            disabled={!canRun || !!scheduler?.running}
           >
-            ▶ Start Scheduler
+            Start scheduler
           </button>
           <button
             type="button"
             className="secondary btn-sm"
-            onClick={stopScheduler}
-            disabled={!schedulerRunning}
+            onClick={() => void stopScheduler()}
+            disabled={!canRun || !scheduler?.running}
           >
-            ⏹ Stop Scheduler
+            Stop scheduler
           </button>
-          <button
-            type="button"
-            className="secondary btn-sm"
-            onClick={() => void load()}
-          >
-            🔄 Refresh
+          <button type="button" className="secondary btn-sm" onClick={() => void load()}>
+            Refresh
           </button>
         </div>
       </div>
 
-      {/* ── Pipeline Health ───────────────────────────────────────────── */}
       <div className="card" style={{ marginTop: '0.75rem' }}>
         <h4>Pipeline Health</h4>
         <div className="row" style={{ gap: '1rem', marginTop: '0.5rem' }}>
           <div className="col" style={{ flex: 1, textAlign: 'center' }}>
-            <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
-              {pipelineHealth.queued}
-            </div>
-            <small>Queued Events</small>
+            <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{pipeline?.queued ?? 0}</div>
+            <small>Queued events</small>
           </div>
           <div className="col" style={{ flex: 1, textAlign: 'center' }}>
             <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
-              {pipelineHealth.writesThisHour} / {pipelineHealth.maxPerHour}
+              {pipeline?.writesThisHour ?? 0} / {pipeline?.maxPerHour ?? '—'}
             </div>
             <small>Writes (hour)</small>
           </div>
           <div className="col" style={{ flex: 1, textAlign: 'center' }}>
-            <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
-              {pipelineHealth.enabled ? '🟢' : '🔴'}
-            </div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{pipeline?.enabled ? 'on' : 'off'}</div>
             <small>Pipeline</small>
           </div>
         </div>
-
         <div style={{ marginTop: '0.5rem' }}>
-          <strong>Active Sources:</strong>{' '}
-          {pipelineHealth.sources && Object.keys(pipelineHealth.sources).length > 0
-            ? Object.entries(pipelineHealth.sources)
+          <strong>Sources:</strong>{' '}
+          {pipeline?.sources
+            ? Object.entries(pipeline.sources)
                 .filter(([, v]) => v)
                 .map(([k]) => k)
-                .join(', ')
-                : 'None'}
+                .join(', ') || 'none'
+            : '—'}
         </div>
-
         <div style={{ marginTop: '0.25rem' }}>
-          <strong>LLM Status:</strong> <span className="status-green">● Connected</span>
+          <strong>LLM:</strong>{' '}
+          {llm ? (
+            <span className={llm.ok ? 'status-green' : 'status-red'}>
+              {llm.ok ? `ready (${llm.model || 'default'})` : llm.reason || 'unavailable'}
+            </span>
+          ) : (
+            <span className="muted">unknown</span>
+          )}
         </div>
       </div>
 
-      {/* ── Auto-Promotion ────────────────────────────────────────────── */}
       <div className="card" style={{ marginTop: '0.75rem' }}>
-        <h4>Auto-Corpus Promotion</h4>
+        <h4>Auto-corpus promotion</h4>
         <p className="hint">
-          Auto-discovered threats promoted from adversarial-harness → corpus/attacks/ for regression testing.
+          Promotions from adversarial harness into corpus/attacks/ (GUARDIAN_AUTO_CORPUS_PROMOTE on server).
         </p>
         <div className="row" style={{ gap: '1rem', marginTop: '0.5rem' }}>
           <div className="col" style={{ flex: 1, textAlign: 'center' }}>
-            <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
-              {promotionStats.totalPromoted}
-            </div>
-            <small>Total Promoted</small>
+            <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{promo.totalPromoted}</div>
+            <small>Total promoted</small>
           </div>
           <div className="col" style={{ flex: 1, textAlign: 'center' }}>
             <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
-              {promotionStats.dailyQuota.used} / {promotionStats.dailyQuota.max}
+              {promo.dailyQuota.used} / {promo.dailyQuota.max}
             </div>
-            <small>Daily Quota</small>
+            <small>Daily quota</small>
           </div>
           <div className="col" style={{ flex: 1, textAlign: 'center' }}>
-            <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
-              {promotionStats.enabled ? '🟢' : '⚪'}
-            </div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{promo.enabled ? 'on' : 'off'}</div>
             <small>Enabled</small>
           </div>
         </div>
-        {promotionStats.lastPromotionAt && (
+        {promo.lastPromotionAt ? (
           <div style={{ marginTop: '0.5rem' }}>
-            <strong>Last promotion:</strong>{' '}
-            {new Date(promotionStats.lastPromotionAt).toLocaleString()}
+            <strong>Last promotion:</strong> {new Date(promo.lastPromotionAt).toLocaleString()}
           </div>
-        )}
-        {!promotionStats.enabled && (
-          <div style={{ marginTop: '0.5rem' }} className="status status-warning">
-            Set GUARDIAN_AUTO_CORPUS_PROMOTE=true on the server to enable automatic corpus growth.
-          </div>
-        )}
+        ) : null}
+        {promo.error ? <p className="status status-error">{promo.error}</p> : null}
       </div>
 
-      {/* ── Quick Actions ──────────────────────────────────────────────── */}
       <div className="card" style={{ marginTop: '0.75rem' }}>
-        <h4>Quick Actions</h4>
+        <h4>Quick actions</h4>
         <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           <button
             type="button"
             className="primary btn-sm"
+            disabled={!canRun || busy === 'threat-lab'}
             onClick={async () => {
-              await fetch('/api/threat-discovery/threat-lab/run', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ mode: 'reactive' }),
-              });
+              setBusy('threat-lab');
+              const r = await runThreatLab('reactive');
+              onAction?.(r.ok ? `Threat Lab job ${r.jobId || 'started'}` : r.error || 'Threat Lab failed');
+              setBusy(null);
               void load();
             }}
           >
-            🧪 Run Threat Lab
+            {busy === 'threat-lab' ? 'Running…' : 'Run Threat Lab'}
           </button>
           <button
             type="button"
             className="primary btn-sm"
+            disabled={!canRun || busy === 'auto-research'}
             onClick={async () => {
-              await fetch('/api/threat-discovery/auto-research/run', { method: 'POST' });
+              setBusy('auto-research');
+              const r = await runAutoThreatResearch();
+              onAction?.(r.ok ? `Auto research ${r.jobId || 'started'}` : r.error || 'Auto research failed');
+              setBusy(null);
               void load();
             }}
           >
-            🔬 Run Auto Research
+            {busy === 'auto-research' ? 'Running…' : 'Run auto research'}
           </button>
         </div>
       </div>

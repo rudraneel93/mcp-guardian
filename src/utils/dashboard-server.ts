@@ -915,10 +915,13 @@ export async function startDashboardServer(
             yaml = '';
           }
         }
-        const mode = policyWatcher?.get()?.getMode() || 'audit';
+        const engine = policyWatcher?.get();
+        const mode = engine?.getMode() || 'audit';
+        const ruleCount = engine?.getRuleCount() ?? 0;
         writeJson(res, 200, {
           mode,
-          rules: yaml ? `${yaml.split('\n').length} lines` : 'No policy file',
+          ruleCount,
+          rules: ruleCount > 0 ? `${ruleCount} active rules` : yaml ? `${yaml.split('\n').length} lines` : 'No policy file',
           yaml,
           path: policyPath,
         });
@@ -1544,6 +1547,39 @@ export async function startDashboardServer(
         } catch (err) {
           writeJson(res, 500, {
             error: err instanceof Error ? err.message : 'Threat intel poll failed',
+          });
+          return;
+        }
+      }
+
+      if (url === '/api/ai/learning/cycle' && method === 'POST') {
+        setCors();
+        try {
+          const { isAiLearningEnabled } = await import('./ai-enabled.js');
+          if (!isAiLearningEnabled()) {
+            writeJson(res, 503, { error: 'AI learning disabled (GUARDIAN_AI_ENABLED=false)' });
+            return;
+          }
+          const { runLearningCycleForDb } = await import('../ai/suggestion-engine.js');
+          const result = await runLearningCycleForDb(runtimeHistoryDb);
+          if (!result) {
+            writeJson(res, 200, {
+              ok: false,
+              error: 'No history data or servers — route MCP traffic through Guardian first',
+            });
+            return;
+          }
+          writeJson(res, 200, {
+            ok: true,
+            suggestionCount: result.suggestions.length,
+            autoAppliedCount: result.autoApplied.length,
+            insightCount: result.insights.length,
+            report: result.report,
+          });
+          return;
+        } catch (err) {
+          writeJson(res, 500, {
+            error: err instanceof Error ? err.message : 'Learning cycle failed',
           });
           return;
         }
@@ -2545,7 +2581,10 @@ export async function startDashboardServer(
         }
         return;
       }
-      if (url === '/api/threat-discovery/promote/batch' && method === 'POST') {
+      if (
+        (url === '/api/threat-discovery/promote/stats' && method === 'GET')
+        || (url === '/api/threat-discovery/promote/batch' && method === 'POST')
+      ) {
         setCors();
         try {
           const { getPromotionStats } = await import('../ai/auto-corpus-promoter.js');

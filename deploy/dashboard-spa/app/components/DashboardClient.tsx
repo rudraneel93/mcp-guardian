@@ -38,6 +38,7 @@ import { HealthReliabilityPanel } from './dashboard/HealthReliabilityPanel';
 import { AuditExplorerPanel } from './dashboard/AuditExplorerPanel';
 import { FleetOverviewPanel } from './dashboard/FleetOverviewPanel';
 import { AnalyticsChartsHub } from './dashboard/AnalyticsChartsHub';
+import { SocQuickActions } from './dashboard/SocQuickActions';
 import { DashboardWindowProvider, DashboardWindowSelector } from './dashboard/DashboardWindowContext';
 import { DashboardRegionProvider, DashboardRegionSelector } from './dashboard/DashboardRegionContext';
 import { VisualsProvider } from './dashboard/VisualsProvider';
@@ -69,7 +70,7 @@ const TABS: { id: TabId; label: string }[] = [
   { id: 'security', label: 'Security' },
   { id: 'cost', label: 'Cost' },
   { id: 'health', label: 'Health' },
-  { id: 'ai', label: 'AI copilot' },
+  { id: 'ai', label: 'SOC / AI' },
   { id: 'enterprise-ai', label: 'Enterprise AI' },
   { id: 'threat-discovery', label: 'Threat Discovery' },
   { id: 'policy', label: 'Policy' },
@@ -305,6 +306,15 @@ export function DashboardClient() {
 
       {tab === 'overview' && (
         <>
+          <SocQuickActions
+            roles={roles}
+            onAction={(m) => setActionMsg(m)}
+            lastUpdated={displayMetrics?.lastUpdated}
+            onOpenThreatDiscovery={() => {
+              setTab('threat-discovery');
+              setThreatDiscoverySubTab('threat-lab');
+            }}
+          />
           <ExecutiveOverviewPanel
             refreshKey={refreshTick}
             metrics={displayMetrics}

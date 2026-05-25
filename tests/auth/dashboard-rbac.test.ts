@@ -41,6 +41,14 @@ describe('dashboard-rbac', () => {
     expect(canAccessRoute(['viewer'], 'POST', '/api/policy/test').allowed).toBe(false);
   });
 
+  it('viewer can read AI status; operator can poll and learning cycle', () => {
+    expect(canAccessRoute(['viewer'], 'GET', '/api/ai/threats').allowed).toBe(true);
+    expect(canAccessRoute(['viewer'], 'POST', '/api/ai/threats/poll').allowed).toBe(false);
+    expect(canAccessRoute(['operator'], 'POST', '/api/ai/threats/poll').allowed).toBe(true);
+    expect(canAccessRoute(['operator'], 'POST', '/api/ai/learning/cycle').allowed).toBe(true);
+    expect(canAccessRoute(['operator'], 'POST', '/api/ai/rollback').allowed).toBe(false);
+  });
+
   it('operator can save policy; viewer cannot', () => {
     expect(canAccessRoute(['operator'], 'PUT', '/api/policy').allowed).toBe(true);
     expect(canAccessRoute(['viewer'], 'PUT', '/api/policy').allowed).toBe(false);
