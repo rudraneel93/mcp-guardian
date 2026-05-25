@@ -43,16 +43,20 @@ export function SwarmRunControls({
   );
 
   const refreshStatus = useCallback(async () => {
-    const st = await fetchSwarmStatus();
-    if (st) {
-      setStatus(st);
-      onSwarmStatus?.(st);
+    try {
+      const st = await fetchSwarmStatus();
+      if (st) {
+        setStatus(st);
+        onSwarmStatus?.(st);
+      }
+      return st;
+    } catch {
+      return null;
     }
-    return st;
   }, [onSwarmStatus]);
 
   useEffect(() => {
-    void refreshStatus();
+    void refreshStatus().catch(() => undefined);
     return () => {
       if (pollRef.current) window.clearInterval(pollRef.current);
     };

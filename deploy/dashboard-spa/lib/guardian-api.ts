@@ -1031,9 +1031,17 @@ export async function runSecuritySwarm(opts?: {
 }
 
 export async function fetchSwarmStatus(): Promise<SwarmJobStatus | null> {
-  const res = await guardianFetch('/api/security-swarm/status');
-  if (!res.ok) return null;
-  return (await res.json()) as SwarmJobStatus;
+  try {
+    const res = await guardianFetch('/api/security-swarm/status');
+    if (!res.ok) return null;
+    try {
+      return (await res.json()) as SwarmJobStatus;
+    } catch {
+      return null;
+    }
+  } catch {
+    return null;
+  }
 }
 
 export async function fetchSwarmReportPreview(): Promise<string | null> {

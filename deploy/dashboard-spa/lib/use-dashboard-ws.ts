@@ -315,7 +315,7 @@ export function useDashboardWs(enabled: boolean, sessionKey: number): DashboardW
     [appendEntry, pushEntry, syncSwarmJobStatus],
   );
 
-  /** HTTP fallback: job.json updates even when WS swarm events miss */
+  /** HTTP fallback: job.json updates when WS swarm events miss (proxy mode only). */
   useEffect(() => {
     if (!enabled) return;
     let cancelled = false;
@@ -326,12 +326,22 @@ export function useDashboardWs(enabled: boolean, sessionKey: number): DashboardW
         if (cancelled || !st) return;
         syncSwarmJobStatus(st);
       } catch {
-        /* API offline — REST poll resumes when back */
+        /* API offline */
       }
     };
 
-    void poll();
-    const id = window.setInterval(() => void poll(), SWARM_POLL_MS);
+    void poll().catch(() => undefined);
+
+    // SOC API on pnpm serve: idle job state is static — avoid 1.5s polling during API restarts
+    if (!usesProxyWebSocket()) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const id = window.setInterval(() => {
+      void poll().catch(() => undefined);
+    }, SWARM_POLL_MS);
     return () => {
       cancelled = true;
       window.clearInterval(id);
