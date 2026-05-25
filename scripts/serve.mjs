@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SPA_ROOT = join(ROOT, 'deploy', 'dashboard-spa');
-const LIVE_DASHBOARD = join(SPA_ROOT, 'app', 'components', 'v2', 'GuardianDashboard.tsx');
+const LIVE_DASHBOARD = join(SPA_ROOT, 'app', 'page.tsx');
 
 function run(cmd, args, opts = {}) {
   return spawnSync(cmd, args, { cwd: opts.cwd ?? ROOT, stdio: 'inherit', ...opts });
@@ -24,10 +24,15 @@ function killPort(port) {
   spawnSync('bash', ['-c', `lsof -ti :${port} 2>/dev/null | xargs -r kill -9 2>/dev/null`], {
     stdio: 'ignore',
   });
+  if (port === 3000) {
+    spawnSync('bash', ['-c', "pkill -9 -f 'next-server' 2>/dev/null; pkill -9 -f 'next dev' 2>/dev/null"], {
+      stdio: 'ignore',
+    });
+  }
 }
 
 if (!existsSync(LIVE_DASHBOARD)) {
-  console.error('[serve] GuardianDashboard (v2) not found — pull latest dashboard-spa.');
+  console.error('[serve] Dashboard page not found — pull latest dashboard-spa (app/page.tsx).');
   process.exit(1);
 }
 
@@ -55,9 +60,12 @@ process.env.GUARDIAN_CI_BYPASS_LICENSE = process.env.GUARDIAN_CI_BYPASS_LICENSE 
 process.env.MCP_GUARDIAN_DB_PATH =
   process.env.MCP_GUARDIAN_DB_PATH || join(homedir(), '.mcp-guardian', 'history.db');
 
+const UI_PORT = process.env.PORT || '3000';
+const UI_HOST = process.env.HOSTNAME || '0.0.0.0';
+
 console.log('[serve] Guardian SOC Dashboard (live API only)');
-console.log('[serve]   UI:  http://localhost:3000/  (GuardianDashboard v2 → /api proxied to SOC API)');
-console.log('[serve]   API: http://localhost:4040/  (soc-api-server)');
+console.log(`[serve]   UI:  http://127.0.0.1:${UI_PORT}/  (also http://localhost:${UI_PORT}/ and /dashboard → /)`);
+console.log(`[serve]   API: http://127.0.0.1:${process.env.SOC_API_PORT}/  (proxied via UI as /api/*)`);
 console.log(`[serve]   DB:  ${process.env.MCP_GUARDIAN_DB_PATH}`);
 console.log('[serve] Press Ctrl+C to stop both processes.\n');
 
@@ -70,7 +78,13 @@ const child = spawn(
   {
     cwd: ROOT,
     stdio: 'inherit',
-    env: { ...process.env, FORCE_COLOR: '1', PORT: '3000' },
+    env: {
+      ...process.env,
+      FORCE_COLOR: '1',
+      PORT: UI_PORT,
+      HOSTNAME: UI_HOST,
+      SOC_API_PORT: process.env.SOC_API_PORT,
+    },
   },
 );
 

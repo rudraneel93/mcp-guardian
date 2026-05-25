@@ -208,6 +208,18 @@ export function DashboardClient() {
     setReady(true);
   }, []);
 
+  /** Remove invalid ?apiBase=null from the URL (causes browser "null is unreachable" if followed). */
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const apiBase = params.get('apiBase');
+    if (apiBase !== 'null' && apiBase !== 'undefined') return;
+    params.delete('apiBase');
+    const qs = params.toString();
+    const next = `${window.location.pathname}${qs ? `?${qs}` : ''}${window.location.hash}`;
+    window.history.replaceState({}, '', next);
+  }, []);
+
   const onAuthenticated = useCallback(() => {
     setSessionKey((k) => k + 1);
   }, []);

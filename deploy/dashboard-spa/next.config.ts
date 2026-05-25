@@ -26,6 +26,13 @@ const nextConfig: NextConfig = {
   images: { unoptimized: true },
   outputFileTracingRoot: join(__dirname),
 
+  async redirects() {
+    return [
+      { source: '/dashboard', destination: '/', permanent: false },
+      { source: '/dashboard/', destination: '/', permanent: false },
+    ];
+  },
+
   // Static export is only for production builds.  During `next dev` we keep
   // the full Next.js server so rewrites work correctly.
   ...(isDev

@@ -430,13 +430,31 @@ export type WsDashboardMessage = {
   action?: string;
 };
 
+/** Reject empty, literal "null"/"undefined", and non-http(s) bases (prevents `null` host navigation). */
+function normalizeApiBase(raw: string | null | undefined): string {
+  if (raw == null) return '';
+  const trimmed = raw.trim();
+  if (!trimmed || trimmed === 'null' || trimmed === 'undefined') return '';
+  if (/^https?:\/\//i.test(trimmed)) {
+    try {
+      const u = new URL(trimmed);
+      if (!u.hostname || u.hostname === 'null') return '';
+      return `${u.origin}${u.pathname}`.replace(/\/$/, '') || u.origin;
+    } catch {
+      return '';
+    }
+  }
+  return '';
+}
+
 /** API origin: query/env override, else same-origin relative paths (`/api/...`). */
 export function resolveApiBase(): string {
   if (typeof window === 'undefined') return '';
   const fromQuery = new URLSearchParams(window.location.search).get('apiBase');
-  if (fromQuery) return fromQuery.replace(/\/$/, '');
-  const envBase = process.env.NEXT_PUBLIC_GUARDIAN_API;
-  if (envBase) return envBase.replace(/\/$/, '');
+  const queryBase = normalizeApiBase(fromQuery);
+  if (queryBase) return queryBase;
+  const envBase = normalizeApiBase(process.env.NEXT_PUBLIC_GUARDIAN_API);
+  if (envBase) return envBase;
   return '';
 }
 

@@ -1820,8 +1820,9 @@ export async function startSocApiServer(port = 4040): Promise<void> {
 
   // ── Start HTTP server ─────────────────────────────────────────────────────
   const httpServer = createServer(app);
-  httpServer.listen(port, () => {
-    Logger.info(`[soc-api] MCP Guardian SOC API server listening on http://localhost:${port}`);
+  const host = process.env['SOC_API_HOST'] || '0.0.0.0';
+  httpServer.listen(port, host, () => {
+    Logger.info(`[soc-api] MCP Guardian SOC API server listening on http://${host}:${port}`);
     Logger.info(`[soc-api] DB path: ${dbPath}`);
   });
 
