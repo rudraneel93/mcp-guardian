@@ -330,18 +330,13 @@ export function useDashboardWs(enabled: boolean, sessionKey: number): DashboardW
       }
     };
 
-    void poll().catch(() => undefined);
+    const pollMs = usesProxyWebSocket() ? SWARM_POLL_MS : 2000;
 
-    // SOC API on pnpm serve: idle job state is static — avoid 1.5s polling during API restarts
-    if (!usesProxyWebSocket()) {
-      return () => {
-        cancelled = true;
-      };
-    }
+    void poll().catch(() => undefined);
 
     const id = window.setInterval(() => {
       void poll().catch(() => undefined);
-    }, SWARM_POLL_MS);
+    }, pollMs);
     return () => {
       cancelled = true;
       window.clearInterval(id);
@@ -404,6 +399,63 @@ export function useDashboardWs(enabled: boolean, sessionKey: number): DashboardW
         applyStatus('Live stream connected (SOC API)', false);
       });
       es.addEventListener('metrics:live', onMetrics);
+      es.addEventListener('swarm:progress', (ev: MessageEvent) => {
+        try {
+          const p = JSON.parse(ev.data as string) as Record<string, unknown>;
+          syncSwarmJobStatus({
+            jobId: String(p.jobId ?? ''),
+            state: 'running',
+            phase: String(p.phase ?? ''),
+            phaseLabel: String(p.phaseLabel ?? p.phase ?? ''),
+            progressPct: Number(p.progressPct ?? 0),
+            startedAt: null,
+            finishedAt: null,
+            exitCode: null,
+            error: null,
+            analysisPath: '',
+            logTail: '',
+          });
+        } catch { /* ignore */ }
+      });
+      es.addEventListener('swarm:done', (ev: MessageEvent) => {
+        try {
+          const p = JSON.parse(ev.data as string) as Record<string, unknown>;
+          syncSwarmJobStatus({
+            jobId: String(p.jobId ?? ''),
+            state: 'done',
+            phase: 'analysis',
+            phaseLabel: 'Complete',
+            progressPct: 100,
+            startedAt: null,
+            finishedAt: null,
+            exitCode: null,
+            error: null,
+            analysisPath: String(p.analysisPath ?? ''),
+            logTail: '',
+          });
+        } catch { /* ignore */ }
+      });
+      es.addEventListener('swarm:failed', (ev: MessageEvent) => {
+        try {
+          const p = JSON.parse(ev.data as string) as Record<string, unknown>;
+          syncSwarmJobStatus({
+            jobId: String(p.jobId ?? ''),
+            state: 'failed',
+            phase: 'analysis',
+            phaseLabel: 'Failed',
+            progressPct: 0,
+            startedAt: null,
+            finishedAt: null,
+            exitCode: null,
+            error: String(p.error ?? 'failed'),
+            analysisPath: '',
+            logTail: '',
+          });
+        } catch { /* ignore */ }
+      });
+      es.addEventListener('analysis:artifact', () => {
+        setSwarmDoneTick((t) => t + 1);
+      });
       es.addEventListener('connected', () => {
         pushEntry('system', 'SOC API stream connected', false);
       });

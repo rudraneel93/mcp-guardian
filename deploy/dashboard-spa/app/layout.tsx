@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import './styles/dashboard.css';
 
 export const metadata: Metadata = {
   title: 'MCP Guardian — SOC Dashboard',
@@ -18,7 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           rel="stylesheet"
         />
       </head>
-      <body style={{ margin: 0, padding: 0, background: '#06090E', height: '100vh', overflow: 'hidden' }}>
+      <body style={{ margin: 0, padding: 0, background: '#06090E', minHeight: '100dvh' }}>
         {children}
       </body>
     </html>

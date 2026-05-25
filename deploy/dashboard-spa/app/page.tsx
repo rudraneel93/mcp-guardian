@@ -1,11 +1,10 @@
 import { DashboardErrorBoundary } from './components/DashboardErrorBoundary';
-import { DashboardClient } from './components/DashboardClient';
+import { GuardianDashboard } from './components/v2/GuardianDashboard';
 
-/** Live SOC dashboard — all panels load from `/api/*` (SOC API or proxy), no bundled snapshots. */
 export default function DashboardPage() {
   return (
     <DashboardErrorBoundary>
-      <DashboardClient />
+      <GuardianDashboard />
     </DashboardErrorBoundary>
   );
 }

@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SPA_ROOT = join(ROOT, 'deploy', 'dashboard-spa');
-const LIVE_DASHBOARD = join(SPA_ROOT, 'app', 'components', 'DashboardClient.tsx');
+const LIVE_DASHBOARD = join(SPA_ROOT, 'app', 'components', 'v2', 'GuardianDashboard.tsx');
 
 function run(cmd, args, opts = {}) {
   return spawnSync(cmd, args, { cwd: opts.cwd ?? ROOT, stdio: 'inherit', ...opts });

@@ -1255,7 +1255,7 @@ export async function startSocApiServer(port = 4040): Promise<void> {
       const servers = await loadServers();
       const entries = servers.map((s) => ({
         serverName: s.name,
-        configPath: s.configPath ?? '',
+        configPath: '',
         transport: s.transport ?? 'stdio',
         status: 'configured' as const,
         toolCount: null as number | null,
@@ -1342,22 +1342,90 @@ export async function startSocApiServer(port = 4040): Promise<void> {
     res.json({ available: false, reason: 'Run security-swarm to generate supply chain graph' });
   });
 
-  // ── GET /api/security-swarm/status ────────────────────────────────────────
+  // ── Security swarm (live job + SSE progress on pnpm serve) ───────────────
+  const {
+    getSwarmJobStatus,
+    startSwarmAnalysis,
+    isSwarmJobRunning,
+    startSwarmJobWatcher,
+  } = await import('./utils/security-swarm-runner.js');
+  const { readSwarmLatest } = await import('./utils/swarm-artifacts.js');
+
+  let lastSseSwarmPhase = '';
+  let lastSseSwarmState = '';
+
+  function pushSwarmSseFromJob(): void {
+    if (sseClients.size === 0) return;
+    const job = getSwarmJobStatus();
+    const state = job.state;
+    const phase = job.phase;
+
+    if (state === 'running' && phase) {
+      const progressKey = `${phase}:${job.progressPct}`;
+      if (progressKey === lastSseSwarmPhase) return;
+      lastSseSwarmPhase = progressKey;
+      broadcastSSE('swarm:progress', {
+        jobId: job.jobId,
+        phase,
+        phaseLabel: job.phaseLabel,
+        progressPct: job.progressPct,
+      });
+    }
+
+    if (state !== lastSseSwarmState && (state === 'done' || state === 'failed')) {
+      lastSseSwarmState = state;
+      lastSseSwarmPhase = '';
+      if (state === 'done') {
+        broadcastSSE('swarm:done', { jobId: job.jobId, analysisPath: job.analysisPath });
+        broadcastSSE('analysis:artifact', { paths: ['report.json', 'latest.json', 'analysis.txt'] });
+      } else {
+        broadcastSSE('swarm:failed', { jobId: job.jobId, error: job.error });
+      }
+    }
+
+    if (state === 'idle' && lastSseSwarmState !== 'idle') {
+      lastSseSwarmState = 'idle';
+      lastSseSwarmPhase = '';
+    }
+  }
+
   app.get('/api/security-swarm/status', (_req: Request, res: Response) => {
-    res.json({
-      jobId: 'none',
-      state: 'idle',
-      phase: 'idle',
-      phaseLabel: 'No active job',
-      progressPct: 0,
-      startedAt: null,
-      finishedAt: null,
-      exitCode: null,
-      error: null,
-      analysisPath: '',
-      logTail: '',
-      hasRun: false,
+    res.json(getSwarmJobStatus());
+  });
+
+  app.post('/api/security-swarm/run', (req: Request, res: Response) => {
+    const full = !!(req.body as { full?: boolean })?.full;
+    const result = startSwarmAnalysis({ full });
+    if (!result.ok) {
+      res.status(result.status ?? 500).json({
+        ok: false,
+        error: result.error,
+        jobId: result.jobId,
+      });
+      return;
+    }
+    lastSseSwarmPhase = '';
+    lastSseSwarmState = 'running';
+    broadcastSSE('swarm:progress', {
+      jobId: result.jobId,
+      phase: 'preflight',
+      phaseLabel: 'Preflight checks',
+      progressPct: 5,
     });
+    res.json({ ok: true, jobId: result.jobId, startedAt: result.startedAt });
+  });
+
+  if (isSwarmJobRunning()) {
+    startSwarmJobWatcher();
+  }
+
+  app.get('/api/security-swarm/latest', (_req: Request, res: Response) => {
+    const latest = readSwarmLatest();
+    if (!latest) {
+      res.status(404).json({ error: 'No swarm run yet — trigger analysis from the Test tab' });
+      return;
+    }
+    res.json(latest);
   });
 
   // ── GET /api/learning/semantic/active-learning ────────────────────────────
@@ -1436,11 +1504,6 @@ export async function startSocApiServer(port = 4040): Promise<void> {
     res.json({ available: false, reason: 'Policy copilot requires ANTHROPIC_API_KEY' });
   });
 
-  // ── POST /api/security-swarm/run ──────────────────────────────────────────
-  app.post('/api/security-swarm/run', (_req: Request, res: Response) => {
-    res.json({ ok: false, error: 'Use pnpm security-swarm from the CLI' });
-  });
-
   // ── POST /api/ai/tenant-model/train ──────────────────────────────────────
   app.post('/api/ai/tenant-model/train', (_req: Request, res: Response) => {
     res.json({ available: false, error: 'Tenant model training requires CLI' });
@@ -1498,10 +1561,11 @@ export async function startSocApiServer(port = 4040): Promise<void> {
     Logger.info(`[soc-api] DB path: ${dbPath}`);
   });
 
-  // ── Background auto-refresh (push SSE updates every 30s) ─────────────────
+  // ── Background SSE: metrics + live swarm job progress ────────────────────
   const AUTO_REFRESH_INTERVAL = parseInt(process.env['SOC_API_REFRESH_INTERVAL_MS'] ?? '30000', 10);
   setInterval(async () => {
     if (sseClients.size === 0) return;
+    pushSwarmSseFromJob();
     try {
       const serverNames = await db.getDistinctActiveServers();
       const records7d = await getAllCallRecords(db, serverNames, 7);
@@ -1519,13 +1583,17 @@ export async function startSocApiServer(port = 4040): Promise<void> {
         lastUpdated: new Date().toISOString(),
       });
 
-      // Invalidate metric caches so next request gets fresh data
       cache.invalidate('aggregate:metrics:7');
       cache.invalidate('exec-summary:7');
     } catch {
-      // Ignore background refresh errors
+      /* ignore */
     }
   }, AUTO_REFRESH_INTERVAL);
+
+  setInterval(() => {
+    if (sseClients.size === 0) return;
+    pushSwarmSseFromJob();
+  }, 1000);
 
   // ── Graceful shutdown ─────────────────────────────────────────────────────
   const shutdown = async () => {
