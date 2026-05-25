@@ -22,6 +22,7 @@ import yaml from 'js-yaml';
 import { createContainer } from './container.js';
 import { ConfigParser } from './config-parser.js';
 import { resolveMcpServerDbPath } from './utils/guardian-db-path.js';
+import { createDashboardSpaMiddleware } from './utils/dashboard-spa-static.js';
 import { Logger } from './utils/logger.js';
 import type { IDatabase } from './database/database-interface.js';
 import type { McpServerConfig, SecurityReport, CostReport, HealthReport, ProxyCallRecord } from './types.js';
@@ -243,7 +244,25 @@ function parseDailyBudget(): number {
 
 // ── Main API server factory ──────────────────────────────────────────────────
 
-export async function startSocApiServer(port = 4040): Promise<void> {
+export type SocApiServerHandle = {
+  port: number;
+  host: string;
+  /** URL for the embedded desktop shell (loopback). */
+  url: string;
+  shutdown: () => Promise<void>;
+};
+
+export type SocApiServerOptions = {
+  host?: string;
+  /** When set, serves the built SOC UI at `/` (same origin as `/api/*`). */
+  staticSpaDir?: string | null;
+  registerSignals?: boolean;
+};
+
+export async function startSocApiServer(
+  port = 4040,
+  options: SocApiServerOptions = {},
+): Promise<SocApiServerHandle> {
   const dbPath = process.env['MCP_GUARDIAN_DB_PATH'] || resolveMcpServerDbPath();
   const container = await createContainer(dbPath);
   const db = container.db;
@@ -1813,6 +1832,11 @@ export async function startSocApiServer(port = 4040): Promise<void> {
     });
   });
 
+  const staticSpaDir = options.staticSpaDir ?? null;
+  if (staticSpaDir) {
+    app.use(createDashboardSpaMiddleware(staticSpaDir));
+  }
+
   // ── 404 fallback ──────────────────────────────────────────────────────────
   app.use((req: Request, res: Response) => {
     res.status(404).json({ error: `Route not found: ${req.method} ${req.path}` });
@@ -1820,11 +1844,8 @@ export async function startSocApiServer(port = 4040): Promise<void> {
 
   // ── Start HTTP server ─────────────────────────────────────────────────────
   const httpServer = createServer(app);
-  const host = process.env['SOC_API_HOST'] || '0.0.0.0';
-  httpServer.listen(port, host, () => {
-    Logger.info(`[soc-api] MCP Guardian SOC API server listening on http://${host}:${port}`);
-    Logger.info(`[soc-api] DB path: ${dbPath}`);
-  });
+  const host = options.host ?? process.env['SOC_API_HOST'] ?? '0.0.0.0';
+  const registerSignals = options.registerSignals !== false;
 
   // ── Background SSE: metrics + live swarm job progress ────────────────────
   const AUTO_REFRESH_INTERVAL = parseInt(process.env['SOC_API_REFRESH_INTERVAL_MS'] ?? '30000', 10);
@@ -1860,17 +1881,50 @@ export async function startSocApiServer(port = 4040): Promise<void> {
     pushSwarmSseFromJob();
   }, 1000);
 
-  // ── Graceful shutdown ─────────────────────────────────────────────────────
   const shutdown = async () => {
     Logger.info('[soc-api] Shutting down...');
     for (const c of sseClients) { try { c.end(); } catch { /* noop */ } }
     sseClients.clear();
-    httpServer.close();
+    await new Promise<void>((resolve, reject) => {
+      httpServer.close((err) => (err ? reject(err) : resolve()));
+    });
     await db.close();
-    process.exit(0);
   };
-  process.on('SIGINT', shutdown);
-  process.on('SIGTERM', shutdown);
+
+  if (registerSignals) {
+    const onSignal = () => {
+      void shutdown().then(
+        () => process.exit(0),
+        () => process.exit(1),
+      );
+    };
+    process.on('SIGINT', onSignal);
+    process.on('SIGTERM', onSignal);
+  }
+
+  return await new Promise<SocApiServerHandle>((resolve, reject) => {
+    httpServer.once('error', reject);
+    httpServer.listen(port, host, () => {
+      const addr = httpServer.address();
+      const actualPort =
+        typeof addr === 'object' && addr && 'port' in addr ? addr.port : port;
+      const displayHost =
+        host === '0.0.0.0' || host === '::' ? '127.0.0.1' : host;
+      Logger.info(
+        `[soc-api] MCP Guardian SOC API server listening on http://${displayHost}:${actualPort}`,
+      );
+      Logger.info(`[soc-api] DB path: ${dbPath}`);
+      if (staticSpaDir) {
+        Logger.info('[soc-api] SOC desktop UI served at / (embedded mode)');
+      }
+      resolve({
+        port: actualPort,
+        host,
+        url: `http://${displayHost}:${actualPort}/`,
+        shutdown,
+      });
+    });
+  });
 }
 
 // Auto-start if run directly
@@ -1878,8 +1932,9 @@ const isMain = process.argv[1]?.endsWith('soc-api-server.ts')
   || process.argv[1]?.endsWith('soc-api-server.js');
 if (isMain) {
   const port = parseInt(process.env['SOC_API_PORT'] ?? '4040', 10);
-  startSocApiServer(port).catch((err) => {
-    console.error('[soc-api] Failed to start:', err);
-    process.exit(1);
-  });
+  startSocApiServer(port, { registerSignals: true })
+    .catch((err) => {
+      console.error('[soc-api] Failed to start:', err);
+      process.exit(1);
+    });
 }

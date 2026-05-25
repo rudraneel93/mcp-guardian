@@ -502,6 +502,23 @@ program
   });
 
 program
+  .command('desktop')
+  .description(
+    'Launch MCP Guardian SOC as a local desktop app (embedded UI + API on 127.0.0.1 — no browser or pnpm serve required)',
+  )
+  .option('--port <n>', 'Loopback port (default: ephemeral)')
+  .option('--server-only', 'Run loopback server only (no Electron window)')
+  .action(async (opts: { port?: string; serverOnly?: boolean }) => {
+    const port = opts.port ? parseInt(opts.port, 10) : undefined;
+    const { launchDesktopApp } = await import('./desktop/launch.js');
+    const code = await launchDesktopApp({
+      port: Number.isFinite(port) ? port : undefined,
+      electron: !opts.serverOnly,
+    });
+    process.exit(code);
+  });
+
+program
   .command('proxy')
   .description('Start MCP Guardian proxy with optional OAuth 2.1 authentication and active policy enforcement')
   .option('-c, --config <path>', 'Path to MCP config file')

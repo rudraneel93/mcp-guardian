@@ -63,8 +63,9 @@ process.env.MCP_GUARDIAN_DB_PATH =
 const UI_PORT = process.env.PORT || '3000';
 const UI_HOST = process.env.HOSTNAME || '0.0.0.0';
 
-console.log('[serve] Guardian SOC Dashboard (live API only)');
-console.log(`[serve]   UI:  http://127.0.0.1:${UI_PORT}/  (also http://localhost:${UI_PORT}/ and /dashboard → /)`);
+console.log('[serve] Guardian SOC Dashboard (developer web mode — optional)');
+console.log('[serve]   Prefer the installable desktop app:  mcp-guardian desktop');
+console.log(`[serve]   UI:  http://127.0.0.1:${UI_PORT}/  (Next.js dev — hot reload)`);
 console.log(`[serve]   API: http://127.0.0.1:${process.env.SOC_API_PORT}/  (proxied via UI as /api/*)`);
 console.log(`[serve]   DB:  ${process.env.MCP_GUARDIAN_DB_PATH}`);
 console.log('[serve] Press Ctrl+C to stop both processes.\n');
