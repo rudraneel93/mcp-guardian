@@ -15,7 +15,8 @@ export type LearningEventType =
   | 'digest_generated'
   | 'autopilot_decision'
   | 'autopilot_rollout'
-  | 'autopilot_rollback';
+  | 'autopilot_rollback'
+  | 'incident_policy_decision';
 
 export type LearningEvent = {
   schemaVersion?: '2026-05-1';

@@ -563,6 +563,8 @@ export function AiLearningPanel({ roles, refreshTick = 0, onAction, onOpenThreat
         <IncidentInvestigatorDrawer
           triggerId={investigateId}
           onClose={() => setInvestigateId(null)}
+          roles={roles}
+          onAction={onAction}
           onOpenThreatLab={(ctx) => {
             setInvestigateId(null);
             onOpenThreatLab?.(ctx);

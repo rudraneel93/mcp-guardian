@@ -43,7 +43,7 @@ config:
     GUARDIAN_LLM_CACHE: "true"
     GUARDIAN_LLM_CACHE_TTL_SEC: "86400"
     GUARDIAN_PG_RLS_ENABLED: "true"
-    GUARDIAN_PRO_CHECKOUT_URL: "https://mcp-guardian.lemonsqueezy.com/checkout/buy/f725abfe-93c0-4bd7-8add-d15af13958fb"
+    GUARDIAN_PRO_CHECKOUT_URL: "https://mcp-guardian.lemonsqueezy.com/checkout/buy/8a8276e9-603f-4e39-baa7-6e24aa2a75e0"
     GUARDIAN_AUDIT_HASH_CHAIN: "true"
     GUARDIAN_AUDIT_HASH_CHAIN_SIEM: "true"
     GUARDIAN_AUDIT_SYNC_ENABLED: "true"

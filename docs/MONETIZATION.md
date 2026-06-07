@@ -38,7 +38,7 @@ Checkout is hosted by **Lemon Squeezy** (Merchant of Record — global VAT handl
 | [templates/pro-purchase-email.md](./templates/pro-purchase-email.md) | Copy for LS product description / receipt |
 | [CLOUD_VERCEL_DEPLOY.md](./CLOUD_VERCEL_DEPLOY.md) | Deploy landing page for payment-provider verification |
 | [WEBHOOK_AUTOMATION.md](./WEBHOOK_AUTOMATION.md) | Webhook auto-register Pro keys |
-| **Buy Pro (live)** | [Checkout](https://mcp-guardian.lemonsqueezy.com/checkout/buy/f725abfe-93c0-4bd7-8add-d15af13958fb) |
+| **Buy Pro (live)** | [Checkout](https://mcp-guardian.lemonsqueezy.com/checkout/buy/8a8276e9-603f-4e39-baa7-6e24aa2a75e0) |
 
 ## Environment variables
 

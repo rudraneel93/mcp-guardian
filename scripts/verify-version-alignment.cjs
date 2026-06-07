@@ -15,6 +15,7 @@ function readVersion(pkgPath) {
 const rootVersion = readVersion('package.json');
 const locked = [
   'packages/core/package.json',
+  'packages/plugin-sdk/package.json',
   'packages/server/package.json',
   'packages/cli/package.json',
 ];
@@ -30,6 +31,4 @@ if (mismatches.length > 0) {
   process.exit(1);
 }
 
-const pluginSdk = readVersion('packages/plugin-sdk/package.json');
-console.log(`OK: root @mcp-guardian/server ${rootVersion}; core/server/cli aligned.`);
-console.log(`Note: @mcp-guardian/plugin-sdk is independently versioned (${pluginSdk}).`);
+console.log(`OK: root @mcp-guardian/server ${rootVersion}; core/plugin-sdk/server/cli aligned.`);

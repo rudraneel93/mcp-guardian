@@ -11,7 +11,7 @@
 
 ## Purchase
 
-- [Buy Pro — $4.99 lifetime](https://mcp-guardian.lemonsqueezy.com/checkout/buy/f725abfe-93c0-4bd7-8add-d15af13958fb)
+- [Buy Pro — $4.99 lifetime](https://mcp-guardian.lemonsqueezy.com/checkout/buy/8a8276e9-603f-4e39-baa7-6e24aa2a75e0)
 - Receipt email: **license key** (Lemon Squeezy `{license_key}`)
 - Control plane URL (same for all buyers): `https://mcp-guardian-cloud.vercel.app`
 

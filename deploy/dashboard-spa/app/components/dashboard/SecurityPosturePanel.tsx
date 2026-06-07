@@ -33,6 +33,18 @@ export function SecurityPosturePanel({ security, refreshKey = 0, onOpenThreatDis
   useEffect(() => {
     void fetchCost(7).then((resp) => setCost(resp));
   }, [refreshKey]);
+
+  useEffect(() => {
+    if (!security) return;
+    const roi = computeCostRiskRoiMetrics(cost, security);
+    void trackAdvancedAnalyticsEvent({
+      feature: 'cost_of_risk_roi',
+      metric: 'netSecurityRoiUsd',
+      confidence: roi.caveat.confidence,
+      value: Number(roi.netSecurityRoiUsd.toFixed(2)),
+    });
+  }, [security, cost, refreshKey]);
+
   if (!security) {
     return (
       <DashboardSection title="Security posture" subtitle="Manifest scan scores from proxy preflight">
@@ -70,14 +82,6 @@ export function SecurityPosturePanel({ security, refreshKey = 0, onOpenThreatDis
         : 'success';
 
   const roi = computeCostRiskRoiMetrics(cost, security);
-  useEffect(() => {
-    void trackAdvancedAnalyticsEvent({
-      feature: 'cost_of_risk_roi',
-      metric: 'netSecurityRoiUsd',
-      confidence: roi.caveat.confidence,
-      value: Number(roi.netSecurityRoiUsd.toFixed(2)),
-    });
-  }, [roi.caveat.confidence, roi.netSecurityRoiUsd]);
 
   return (
     <div className="security-posture-panel">

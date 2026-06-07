@@ -10,7 +10,7 @@ CLOUD="$ROOT/apps/cloud"
 SCOPE="rudraneel93-gmailcoms-projects"
 PROJECT="mcp-guardian-cloud"
 APP_URL="https://mcp-guardian-cloud.vercel.app"
-CHECKOUT_URL="https://mcp-guardian.lemonsqueezy.com/checkout/buy/f725abfe-93c0-4bd7-8add-d15af13958fb"
+CHECKOUT_URL="https://mcp-guardian.lemonsqueezy.com/checkout/buy/8a8276e9-603f-4e39-baa7-6e24aa2a75e0"
 VERCEL_CLI="${VERCEL_CLI:-npx vercel@48}"
 
 if [[ -z "${VERCEL_TOKEN:-}" ]]; then

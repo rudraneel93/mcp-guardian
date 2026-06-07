@@ -1,0 +1,17 @@
+{
+  "id": "adv-395",
+  "category": "novel-unknown",
+  "toolName": "read_file",
+  "arguments": {
+    "path": "..%c0%af..%c0%afetc/passwd"
+  },
+  "ruleHint": "novel-overlong-utf8",
+  "attackClass": "unknown-utf8-traversal",
+  "expected": "block",
+  "expectedBlock": true,
+  "source": "manual-novel-unknown",
+  "novel": {
+    "generatedAt": "2026-06-07T19:50:43.702Z",
+    "note": "Unknown attack patterns for live traffic test"
+  }
+}

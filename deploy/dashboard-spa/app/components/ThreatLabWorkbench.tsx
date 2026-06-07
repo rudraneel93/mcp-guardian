@@ -201,6 +201,8 @@ export function ThreatLabWorkbench({
     <IncidentInvestigatorDrawer
       triggerId={investigateId}
       onClose={() => setInvestigateId(null)}
+      roles={roles}
+      onAction={onRunStarted}
     />
   ) : null;
 

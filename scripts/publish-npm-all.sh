@@ -3,15 +3,21 @@
 # Server/CLI publish from .tgz; postpack restore runs ONLY after publish so npm
 # registry manifest keeps semver deps (not workspace:).
 # Requires: npm login (npm whoami). Auth options:
-#   NPM_AUTH_TYPE=web ./scripts/publish-npm-all.sh   # browser SSO (recommended)
-#   NPM_OTP=123456 ./scripts/publish-npm-all.sh      # 2FA one-time password
+#   NODE_AUTH_TOKEN=... ./scripts/publish-npm-all.sh   # CI automation token
+#   NPM_AUTH_TYPE=web ./scripts/publish-npm-all.sh     # browser SSO (recommended)
+#   NPM_OTP=123456 ./scripts/publish-npm-all.sh        # 2FA one-time password
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 PUBLISH_ARGS=(--access public)
-if [[ -n "${NPM_AUTH_TYPE:-}" ]]; then
+if [[ -n "${NODE_AUTH_TOKEN:-}" ]]; then
+  : # setup-node / .npmrc provides auth
+  if [[ -n "${PUBLISH_PROVENANCE:-}" ]]; then
+    PUBLISH_ARGS+=(--provenance)
+  fi
+elif [[ -n "${NPM_AUTH_TYPE:-}" ]]; then
   PUBLISH_ARGS+=(--auth-type="$NPM_AUTH_TYPE")
 elif [[ -n "${NPM_OTP:-}" ]]; then
   PUBLISH_ARGS+=(--otp="$NPM_OTP")
@@ -33,7 +39,14 @@ publish_from_tgz() {
   node "$ROOT/scripts/verify-npm-registry-manifest.mjs" "$pkg_name" "$version"
 }
 
-echo "npm user: $(npm whoami)"
+wait_dep_visible() {
+  local pkg_name="$1"
+  local version="$2"
+  echo "[publish] Waiting for ${pkg_name}@${version} on registry..."
+  node "$ROOT/scripts/wait-npm-registry.mjs" "$pkg_name" "$version"
+}
+
+echo "npm user: $(npm whoami 2>/dev/null || echo '(token auth)')"
 echo "Building workspace packages for publish..."
 
 build_with_tsc() {
@@ -82,18 +95,20 @@ publish_pkg() {
 }
 
 publish_pkg packages/plugin-sdk
-publish_pkg packages/core
+PLUGIN_SDK_VERSION=$(node -p "require('./packages/plugin-sdk/package.json').version")
+wait_dep_visible "@mcp-guardian/plugin-sdk" "$PLUGIN_SDK_VERSION"
 
-# After publishing deps, wait for registry replication then confirm chain
-for dep in core plugin-sdk; do
-  if npm view "@mcp-guardian/server@${SERVER_VERSION}" version &>/dev/null; then
-    node "$ROOT/scripts/wait-npm-registry.mjs" "@mcp-guardian/${dep}" "$SERVER_VERSION" || true
-  fi
-  if npm view "@mcp-guardian/server@${SERVER_VERSION}" version &>/dev/null \
-    && ! npm view "@mcp-guardian/${dep}@${SERVER_VERSION}" version &>/dev/null; then
-    echo ""
-    echo "WARN: @mcp-guardian/${dep}@${SERVER_VERSION} not visible yet — npm replication can take ~1 min." >&2
-    echo "      Check: npm view @mcp-guardian/${dep}@${SERVER_VERSION} version" >&2
+publish_pkg packages/core
+CORE_VERSION=$(node -p "require('./packages/core/package.json').version")
+wait_dep_visible "@mcp-guardian/core" "$CORE_VERSION"
+
+# Mandatory: dependency chain must resolve before server publish
+for dep_pkg in "@mcp-guardian/plugin-sdk" "@mcp-guardian/core"; do
+  dep_ver="$PLUGIN_SDK_VERSION"
+  [[ "$dep_pkg" == "@mcp-guardian/core" ]] && dep_ver="$CORE_VERSION"
+  if ! npm view "${dep_pkg}@${dep_ver}" version &>/dev/null; then
+    echo "ERROR: ${dep_pkg}@${dep_ver} not on registry — cannot publish server@${SERVER_VERSION}" >&2
+    exit 1
   fi
 done
 
@@ -105,6 +120,8 @@ else
   echo "=== Publishing @mcp-guardian/server@${SERVER_VERSION} from tarball ==="
   node scripts/validate-npm-pack.mjs
   SERVER_TGZ=$(pack_tgz)
+  echo "[publish] Verifying tarball deps resolve on registry before publish..."
+  node "$ROOT/scripts/verify-npm-deps-resolvable.mjs" --local-tgz "$SERVER_TGZ"
   publish_from_tgz "@mcp-guardian/server" "$SERVER_VERSION" "$SERVER_TGZ"
   node scripts/postpack-npm-deps.mjs
   rm -f "$SERVER_TGZ"
@@ -119,9 +136,18 @@ else
   echo "=== Publishing @mcp-guardian/cli@${CLI_VERSION} from tarball ==="
   (cd packages/cli && node ../../scripts/validate-npm-pack.mjs)
   CLI_TGZ=$(cd packages/cli && pack_tgz)
+  echo "[publish] Verifying CLI tarball deps resolve on registry before publish..."
+  node "$ROOT/scripts/verify-npm-deps-resolvable.mjs" --local-tgz "packages/cli/$CLI_TGZ"
   (cd packages/cli && publish_from_tgz "@mcp-guardian/cli" "$CLI_VERSION" "$CLI_TGZ")
   (cd packages/cli && PREPACK_PKG=package.json node ../../scripts/postpack-npm-deps.mjs)
   rm -f "packages/cli/$CLI_TGZ"
+fi
+
+if npm view "@mcp-guardian/server@${SERVER_VERSION}" version &>/dev/null; then
+  echo ""
+  echo "=== Verifying registry dependency chain for server@${SERVER_VERSION} ==="
+  node "$ROOT/scripts/verify-npm-deps-resolvable.mjs" "@mcp-guardian/server" "$SERVER_VERSION"
+  node "$ROOT/scripts/verify-npm-registry-install.mjs" "$SERVER_VERSION"
 fi
 
 echo ""

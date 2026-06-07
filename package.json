@@ -1,6 +1,6 @@
 {
   "name": "@mcp-guardian/server",
-  "version": "4.1.7",
+  "version": "4.1.8",
   "description": "Security, cost, and health governance proxy for MCP infrastructure — three-layer detection engine (regex + schema + LLM), monorepo, corpus, CI/CD",
   "type": "module",
   "files": [
@@ -142,6 +142,7 @@
     "cloud:migrate:prod": "./scripts/cloud-migrate-production.sh",
     "cloud:verify-prod": "./scripts/verify-pro-production.sh",
     "publish:npm": "./scripts/publish-npm-all.sh",
+    "publish:npm:verify": "node scripts/verify-npm-deps-resolvable.mjs @mcp-guardian/server $(node -p \"require('./package.json').version\")",
     "cloud:register-pro-key": "node apps/cloud/scripts/register-pro-license.mjs",
     "eval:full": "ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY tsx corpus/run-eval.ts",
     "eval:attack-learning": "tsx scripts/simulate-attack-learning-stream.ts",
@@ -165,8 +166,8 @@
     "prepublishOnly": "npm run build && npm run dashboard:build && node scripts/validate-npm-pack.mjs && npm test"
   },
   "dependencies": {
-    "@mcp-guardian/core": "workspace:^4.1.7",
-    "@mcp-guardian/plugin-sdk": "workspace:^4.1.7",
+    "@mcp-guardian/core": "workspace:^4.1.8",
+    "@mcp-guardian/plugin-sdk": "workspace:^4.1.8",
     "@modelcontextprotocol/sdk": "^1.25.2",
     "@opentelemetry/api": "^1.9.1",
     "@opentelemetry/auto-instrumentations-node": "^0.75.0",

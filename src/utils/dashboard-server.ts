@@ -1345,6 +1345,155 @@ export async function startDashboardServer(
         return;
       }
 
+      if (url === '/api/incidents/generate-policy' && method === 'POST') {
+        setCors();
+        const body = await readBody(req);
+        const triggerId = String(body.triggerId || body.semanticAuditId || '').trim();
+        if (!triggerId) {
+          writeJson(res, 400, { error: 'triggerId required' });
+          return;
+        }
+        const { generateIncidentPolicyDraft, IncidentPolicyGenerateError } = await import(
+          '../ai/incident-policy-generator.js'
+        );
+        try {
+          const draft = await generateIncidentPolicyDraft({
+            triggerId,
+            tenantId: requestTenantId,
+          });
+          writeJson(res, 200, draft);
+        } catch (err) {
+          if (err instanceof IncidentPolicyGenerateError) {
+            const status = err.code === 'not_found' ? 404 : err.code === 'llm_unavailable' ? 503 : 422;
+            writeJson(res, status, { error: err.message, code: err.code });
+            return;
+          }
+          throw err;
+        }
+        return;
+      }
+
+      if (url === '/api/incidents/policy/accept' && method === 'POST') {
+        setCors();
+        const body = await readBody(req);
+        const rule = body.rule as import('../policy/policy-types.js').PolicyRule | undefined;
+        if (!rule?.name || !rule?.action) {
+          writeJson(res, 400, { error: 'invalid_rule', reason: 'rule.name and rule.action are required' });
+          return;
+        }
+        const draftId = String(body.draftId || '');
+        const triggerId = String(body.triggerId || '');
+        const linkedCandidateId = body.linkedCandidateId ? String(body.linkedCandidateId) : undefined;
+        const { buildApprovalPreview } = await import('../ai/autopilot-approval.js');
+        const { recordSuggestionOutcome } = await import('../ai/suggestion-engine.js');
+        const policyPath = process.env.GUARDIAN_POLICY_PATH || join(REPO_ROOT, 'default-policy.yaml');
+        const preview = buildApprovalPreview({
+          suggestionId: draftId || `incident-${triggerId}`,
+          source: 'attack',
+          rule,
+          actor: authResult.identity || 'dashboard-user',
+          stage: 'canary',
+          evidence: {
+            confidence: typeof body.confidence === 'number' ? body.confidence : 0.75,
+            replayCoverage:
+              typeof body.replayCoverage === 'number'
+                ? body.replayCoverage
+                : typeof body.confidence === 'number'
+                  ? body.confidence
+                  : 0.95,
+            predictedFalsePositiveDelta: 0,
+            predictedBypassDelta: 0,
+            blastRadiusPercent: 0.05,
+            rollbackConfidence: 0.95,
+            canarySizePercent: 0.05,
+            simulationPassed: body.simulationPassed !== false,
+          },
+        });
+        if (process.env.GUARDIAN_AUTOPILOT_ENFORCE_SAFETY !== 'false' && !preview.safety.allowed) {
+          writeJson(res, 422, {
+            error: 'autopilot_safety_blocked',
+            blockers: preview.safety.blockers,
+            warnings: preview.safety.warnings,
+            impact: preview.impact,
+          });
+          return;
+        }
+        const { applySuggestionToPolicy } = await import('../ai/policy-applier.js');
+        const result = await applySuggestionToPolicy(rule, policyPath, policyWatcher ?? null, {
+          tenantId: requestTenantId,
+        });
+        if (!result.applied) {
+          writeJson(res, 400, {
+            error: result.reason ?? 'apply_failed',
+            simulationSummary: result.simulationSummary,
+          });
+          return;
+        }
+        const auditor = getPolicyAuditor();
+        if (auditor) {
+          auditor.record({
+            timestamp: new Date().toISOString(),
+            actor: String(req.headers['x-guardian-policy-approver'] || authResult.identity || 'dashboard'),
+            change: 'incident_policy_accept',
+            oldValue: draftId,
+            newValue: rule.name,
+            sourceHash: auditor.computeHash(JSON.stringify(rule)),
+          });
+        }
+        if (linkedCandidateId) {
+          const { markThreatLabCandidate } = await import('./swarm-artifacts.js');
+          markThreatLabCandidate(requestTenantId, linkedCandidateId, 'accepted');
+        }
+        await recordSuggestionOutcome(draftId || `incident-${triggerId}`, 'applied', {
+          ruleName: rule.name,
+          source: 'attack',
+          confidence: typeof body.confidence === 'number' ? body.confidence : 0.75,
+          userId: authResult.identity || '',
+        });
+        const { appendLearningEvent } = await import('./learning-events.js');
+        appendLearningEvent({
+          type: 'incident_policy_decision',
+          detail: `accepted incident policy draft ${draftId || triggerId} → ${rule.name}`,
+          confidence: typeof body.confidence === 'number' ? body.confidence : undefined,
+          metadata: { triggerId, draftId, ruleName: rule.name, action: 'accepted' },
+        }, requestTenantId);
+        writeJson(res, 200, {
+          status: 'accepted',
+          draftId,
+          triggerId,
+          ruleName: rule.name,
+          preview,
+        });
+        return;
+      }
+
+      if (url === '/api/incidents/policy/reject' && method === 'POST') {
+        setCors();
+        const body = await readBody(req);
+        const draftId = String(body.draftId || '');
+        const triggerId = String(body.triggerId || '');
+        const linkedCandidateId = body.linkedCandidateId ? String(body.linkedCandidateId) : undefined;
+        const { recordSuggestionOutcome } = await import('../ai/suggestion-engine.js');
+        await recordSuggestionOutcome(draftId || `incident-${triggerId}`, 'rejected', {
+          ruleName: String(body.ruleName || draftId || triggerId),
+          source: 'attack',
+          confidence: typeof body.confidence === 'number' ? body.confidence : 0.5,
+          userId: authResult.identity || '',
+        });
+        if (linkedCandidateId) {
+          const { markThreatLabCandidate } = await import('./swarm-artifacts.js');
+          markThreatLabCandidate(requestTenantId, linkedCandidateId, 'rejected');
+        }
+        const { appendLearningEvent } = await import('./learning-events.js');
+        appendLearningEvent({
+          type: 'incident_policy_decision',
+          detail: `rejected incident policy draft ${draftId || triggerId}`,
+          metadata: { triggerId, draftId, action: 'rejected' },
+        }, requestTenantId);
+        writeJson(res, 200, { status: 'rejected', draftId, triggerId });
+        return;
+      }
+
       if (url === '/api/learning/semantic/active-learning' && method === 'GET') {
         setCors();
         const { loadSemanticAuditRecordsAsync } = await import('../ai/semantic-audit-store.js');

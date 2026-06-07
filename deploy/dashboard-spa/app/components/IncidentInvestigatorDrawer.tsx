@@ -1,7 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { investigateIncident } from '@/lib/guardian-api';
+import {
+  acceptIncidentPolicyDraft,
+  generateIncidentPolicy,
+  investigateIncident,
+  rejectIncidentPolicyDraft,
+  type IncidentPolicyDraft,
+} from '@/lib/guardian-api';
+import { hasPermission } from '@/lib/dashboard-roles';
 
 export type ThreatLabContext = {
   semanticAuditId: string;
@@ -42,18 +49,34 @@ type Props = {
   triggerId: string;
   onClose: () => void;
   onOpenThreatLab?: (ctx: ThreatLabContext) => void;
+  roles?: string[];
+  onAction?: (msg: string) => void;
 };
 
-export function IncidentInvestigatorDrawer({ triggerId, onClose, onOpenThreatLab }: Props) {
+export function IncidentInvestigatorDrawer({
+  triggerId,
+  onClose,
+  onOpenThreatLab,
+  roles,
+  onAction,
+}: Props) {
   const [loading, setLoading] = useState(true);
   const [investigation, setInvestigation] = useState<Investigation | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [policyDraft, setPolicyDraft] = useState<IncidentPolicyDraft | null>(null);
+  const [generateBusy, setGenerateBusy] = useState(false);
+  const [decisionBusy, setDecisionBusy] = useState(false);
+  const [decisionFeedback, setDecisionFeedback] = useState<string | null>(null);
+
+  const canGenerate = hasPermission(roles, 'policy_test') || hasPermission(roles, 'ai');
+  const canMutate = hasPermission(roles, 'policy_mutate');
 
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       setLoading(true);
       setError(null);
+      setPolicyDraft(null);
       const result = await investigateIncident(triggerId);
       if (!cancelled) {
         setInvestigation((result.investigation as Investigation | null) ?? null);
@@ -81,7 +104,107 @@ export function IncidentInvestigatorDrawer({ triggerId, onClose, onOpenThreatLab
     });
   };
 
+  const onGeneratePolicy = async () => {
+    if (!canGenerate || generateBusy) return;
+    setGenerateBusy(true);
+    setDecisionFeedback(null);
+    try {
+      const result = await generateIncidentPolicy(triggerId);
+      if (!result.draft) {
+        onAction?.(result.error || 'Could not generate policy draft');
+        return;
+      }
+      setPolicyDraft(result.draft);
+      onAction?.(
+        result.draft.source === 'existing-candidate'
+          ? 'Loaded existing Threat Lab candidate as draft'
+          : 'Policy draft generated — review and accept or reject',
+      );
+    } finally {
+      setGenerateBusy(false);
+    }
+  };
+
+  const onAcceptDraft = async () => {
+    if (!policyDraft || !canMutate || decisionBusy) return;
+    if (policyDraft.validationErrors?.length && !policyDraft.replay?.readyForReview) {
+      const proceed = window.confirm(
+        `This draft has validation warnings:\n\n${policyDraft.validationErrors.join('\n')}\n\nApply the rule anyway?`,
+      );
+      if (!proceed) {
+        setDecisionFeedback('Accept cancelled — resolve warnings or confirm to apply anyway.');
+        return;
+      }
+    }
+    setDecisionBusy(true);
+    setDecisionFeedback('Applying policy rule…');
+    try {
+      const result = await acceptIncidentPolicyDraft({
+        draftId: policyDraft.draftId,
+        triggerId: policyDraft.triggerId,
+        rule: policyDraft.rule,
+        incidentId: policyDraft.incidentId,
+        linkedCandidateId: policyDraft.linkedCandidateId,
+        confidence: policyDraft.confidence,
+        simulationPassed: policyDraft.replay?.readyForReview !== false,
+        replayCoverage:
+          policyDraft.replay && policyDraft.replay.total > 0
+            ? policyDraft.replay.passed / policyDraft.replay.total
+            : undefined,
+      });
+      if (result.ok) {
+        const ruleName = result.ruleName || String(policyDraft.rule.name || 'rule');
+        const msg = `Policy rule accepted: ${ruleName}`;
+        setDecisionFeedback(msg);
+        onAction?.(msg);
+        setPolicyDraft(null);
+      } else {
+        const msg = result.error || 'Accept failed';
+        setDecisionFeedback(msg);
+        onAction?.(msg);
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Accept failed unexpectedly';
+      setDecisionFeedback(msg);
+      onAction?.(msg);
+    } finally {
+      setDecisionBusy(false);
+    }
+  };
+
+  const onRejectDraft = async () => {
+    if (!policyDraft || !canMutate || decisionBusy) return;
+    setDecisionBusy(true);
+    setDecisionFeedback('Rejecting draft…');
+    try {
+      const ok = await rejectIncidentPolicyDraft({
+        draftId: policyDraft.draftId,
+        triggerId: policyDraft.triggerId,
+        linkedCandidateId: policyDraft.linkedCandidateId,
+        ruleName: String(policyDraft.rule.name || ''),
+        confidence: policyDraft.confidence,
+      });
+      if (ok) {
+        setDecisionFeedback('Policy draft rejected.');
+        onAction?.('Policy draft rejected');
+        setPolicyDraft(null);
+      } else {
+        setDecisionFeedback('Reject failed — check proxy logs.');
+        onAction?.('Reject failed');
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Reject failed unexpectedly';
+      setDecisionFeedback(msg);
+      onAction?.(msg);
+    } finally {
+      setDecisionBusy(false);
+    }
+  };
+
   const graph = investigation?.intentGraph;
+  const draftHasWarnings = Boolean(
+    policyDraft?.validationErrors?.length && !policyDraft.replay?.readyForReview,
+  );
 
   return (
     <aside className="threat-drawer incident-drawer" role="dialog" aria-label="Incident investigation">
@@ -161,6 +284,88 @@ export function IncidentInvestigatorDrawer({ triggerId, onClose, onOpenThreatLab
               </ul>
             </>
           ) : null}
+
+          <section className="incident-policy-draft candidate-drawer-section">
+            <h4>Policy response</h4>
+            {!policyDraft ? (
+              <>
+                <p className="hint">
+                  Generate a blocking rule tailored to this incident. Review the draft before applying.
+                </p>
+                {canGenerate ? (
+                  <div className="btn-row">
+                    <button type="button" onClick={() => void onGeneratePolicy()} disabled={generateBusy}>
+                      {generateBusy ? 'Generating…' : 'Generate policy'}
+                    </button>
+                  </div>
+                ) : (
+                  <p className="muted">Requires operator or admin role to generate policy.</p>
+                )}
+              </>
+            ) : (
+              <>
+                <dl className="candidate-drawer-meta">
+                  <dt>Attack class</dt>
+                  <dd>{policyDraft.attackClass}</dd>
+                  <dt>Confidence</dt>
+                  <dd>{(policyDraft.confidence * 100).toFixed(0)}%</dd>
+                  <dt>Source</dt>
+                  <dd>{policyDraft.source.replace(/-/g, ' ')}</dd>
+                  {policyDraft.replay ? (
+                    <>
+                      <dt>Replay</dt>
+                      <dd>
+                        {policyDraft.replay.passed}/{policyDraft.replay.total}
+                        {policyDraft.replay.readyForReview ? ' · ready for review' : ''}
+                      </dd>
+                    </>
+                  ) : null}
+                </dl>
+                <p>{policyDraft.hypothesis}</p>
+                {policyDraft.validationErrors?.length ? (
+                  <ul className="list compact">
+                    {policyDraft.validationErrors.map((e) => (
+                      <li key={e} className="status-warning">
+                        {e}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+                <pre className="code-block">{policyDraft.yaml}</pre>
+                {draftHasWarnings ? (
+                  <p className="hint status-warning">
+                    Replay or validation warnings present — you can still accept after confirming.
+                  </p>
+                ) : null}
+                {decisionFeedback ? (
+                  <p className={decisionFeedback.includes('accepted') ? 'hint' : 'muted'}>{decisionFeedback}</p>
+                ) : null}
+                {canMutate ? (
+                  <div className="btn-row candidate-drawer-actions">
+                    <button
+                      type="button"
+                      className="primary"
+                      onClick={() => void onAcceptDraft()}
+                      disabled={decisionBusy}
+                    >
+                      {decisionBusy ? 'Applying…' : 'Accept rule'}
+                    </button>
+                    <button
+                      type="button"
+                      className="secondary"
+                      onClick={() => void onRejectDraft()}
+                      disabled={decisionBusy}
+                    >
+                      {decisionBusy ? 'Working…' : 'Reject draft'}
+                    </button>
+                  </div>
+                ) : (
+                  <p className="muted">Requires operator role to accept or reject policy drafts.</p>
+                )}
+              </>
+            )}
+          </section>
+
           {onOpenThreatLab ? (
             <div className="btn-row">
               <button type="button" onClick={openThreatLab}>

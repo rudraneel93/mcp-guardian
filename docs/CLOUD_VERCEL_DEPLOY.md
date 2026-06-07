@@ -29,7 +29,7 @@ Use the team that owns your production app (e.g. [rudraneel93-gmailcoms-projects
 | `LICENSE_JWT_SECRET` | same as `AUTH_SECRET` or separate |
 | `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | **Required for free sign-in** — [OAUTH_CLOUD_SETUP.md](./OAUTH_CLOUD_SETUP.md) |
 | `AUTH_GITHUB_ID` / `AUTH_GITHUB_SECRET` | **Required for free sign-in** |
-| `NEXT_PUBLIC_PRO_CHECKOUT_URL` | `https://mcp-guardian.lemonsqueezy.com/checkout/buy/f725abfe-93c0-4bd7-8add-d15af13958fb` |
+| `NEXT_PUBLIC_PRO_CHECKOUT_URL` | `https://mcp-guardian.lemonsqueezy.com/checkout/buy/8a8276e9-603f-4e39-baa7-6e24aa2a75e0` |
 | `LEMONSQUEEZY_WEBHOOK_SECRET` | From LS → Settings → Webhooks → signing secret |
 | `LEMONSQUEEZY_STORE_ID` | Optional — your LS store numeric ID |
 

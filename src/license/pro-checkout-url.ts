@@ -1,6 +1,6 @@
 /** Live Lemon Squeezy checkout — safe to commit (public product URL). */
 export const DEFAULT_PRO_CHECKOUT_URL =
-  'https://mcp-guardian.lemonsqueezy.com/checkout/buy/f725abfe-93c0-4bd7-8add-d15af13958fb';
+  'https://mcp-guardian.lemonsqueezy.com/checkout/buy/8a8276e9-603f-4e39-baa7-6e24aa2a75e0';
 
 export function resolveProCheckoutUrl(): string {
   const fromEnv =

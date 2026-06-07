@@ -1,6 +1,6 @@
 {
   "name": "@mcp-guardian/mtx",
-  "version": "4.1.7",
+  "version": "4.1.8",
   "description": "MCP Threat Exchange (MTX) v1 format for anonymized threat intelligence",
   "type": "module",
   "main": "./dist/index.js",

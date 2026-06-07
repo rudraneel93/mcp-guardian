@@ -589,6 +589,7 @@ button.secondary, .secondary {
   box-shadow: var(--shadow-sm);
 }
 .incident-drawer { position: sticky; bottom: 0; z-index: 5; }
+.incident-policy-draft { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08)); }
 .threat-drawer-head,
 .candidate-drawer-head {
   display: flex;

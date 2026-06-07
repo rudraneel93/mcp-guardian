@@ -2,10 +2,10 @@ version: '1.0'
 policy:
   mode: block
   default_action: block
-  require_certification: gold
-  default_sandbox_tier: shadow
   semantic_shell: true
   unicode_strict: true
+  require_certification: gold
+  default_sandbox_tier: shadow
   rules:
     - name: deny-dangerous-tools
       description: Explicitly deny tools that can execute arbitrary code
@@ -43,6 +43,7 @@ policy:
     - name: allowlist-common-tools
       description: Read-only / query tools; all others blocked by default_action
       action: block
+      enabled: true
       tools:
         allow:
           - read_file
@@ -58,7 +59,6 @@ policy:
           - echo
           - puppeteer_navigate
           - puppeteer_screenshot
-      enabled: false
     - name: block-dangerous-urls
       description: Block SSRF-prone URLs (metadata, localhost, file/javascript/data schemes, private IPs)
       action: block
@@ -141,8 +141,10 @@ policy:
       argPatterns:
         - field: sql
           patterns:
-            - \bselect\b.+\bfrom\b.+\b(accounts|customers|users|credentials|secrets|payments|transactions|admin_users|passwords)\b
-            - \bselect\s+\*\s+from\b.+\b(accounts|customers|users|credentials|secrets|payments|transactions|admin_users|passwords)\b
+            - >-
+              \bselect\b.+\bfrom\b.+\b(accounts|customers|users|credentials|secrets|payments|transactions|admin_users|passwords)\b
+            - >-
+              \bselect\s+\*\s+from\b.+\b(accounts|customers|users|credentials|secrets|payments|transactions|admin_users|passwords)\b
             - \bunion\b.+\bselect\b
             - \bdelete\s+from\b
             - \b(?:drop|truncate)\s+table\b
@@ -158,8 +160,10 @@ policy:
             - admin\)\(&
         - field: query
           patterns:
-            - \bselect\b.+\bfrom\b.+\b(accounts|customers|users|credentials|secrets|payments|transactions|admin_users|passwords)\b
-            - \bselect\s+\*\s+from\b.+\b(accounts|customers|users|credentials|secrets|payments|transactions|admin_users|passwords)\b
+            - >-
+              \bselect\b.+\bfrom\b.+\b(accounts|customers|users|credentials|secrets|payments|transactions|admin_users|passwords)\b
+            - >-
+              \bselect\s+\*\s+from\b.+\b(accounts|customers|users|credentials|secrets|payments|transactions|admin_users|passwords)\b
             - \bunion\b.+\bselect\b
             - \bdelete\s+from\b
             - \badmin'\s*--
@@ -231,3 +235,12 @@ policy:
           - run
       patterns:
         - \{"x":"ignore all previous instructions developer mode"\}
+    - name: assist-block-mcp
+      description: >-
+        User goal: "Block MCP attack: prompt-injection. Reason: Local heuristic risk 0.75 (ignore-instructions,
+        jailbreak) fp=7302693568e69003 Evidence: run on s — pass Generate a blocking policy rule with regex patterns for
+        tool arguments."
+      action: block
+      tools:
+        deny:
+          - mcp

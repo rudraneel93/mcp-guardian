@@ -109,6 +109,9 @@ export function permissionForRoute(method: string, url: string): DashboardRouteP
   if (path === '/api/policy/copilot/replay') return m === 'POST' ? 'policy_test' : null;
   if (path === '/api/policy/copilot/counterfactual') return m === 'POST' ? 'policy_test' : null;
   if (path === '/api/incidents/investigate') return m === 'POST' ? 'ai' : null;
+  if (path === '/api/incidents/generate-policy') return m === 'POST' ? 'ai' : null;
+  if (path === '/api/incidents/policy/accept') return m === 'POST' ? 'policy_mutate' : null;
+  if (path === '/api/incidents/policy/reject') return m === 'POST' ? 'policy_mutate' : null;
   if (path === '/api/learning/semantic/active-learning') return m === 'GET' ? 'ai' : null;
   if (path === '/api/learning/semantic/tribunal') return m === 'GET' ? 'ai' : null;
   if (path.startsWith('/api/dashboard/insights')) return m === 'GET' ? 'read' : null;

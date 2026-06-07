@@ -39,6 +39,17 @@ export function HealthReliabilityPanel({ health, refreshKey = 0 }: Props) {
     void loadVisuals();
   }, [loadVisuals, refreshKey]);
 
+  useEffect(() => {
+    if (!health) return;
+    const metrics = computeReliabilityRiskMetrics(health, visuals?.traffic?.byServer ?? []);
+    void trackAdvancedAnalyticsEvent({
+      feature: 'reliability_risk_index',
+      metric: 'index',
+      confidence: metrics.caveat.confidence,
+      value: metrics.index,
+    });
+  }, [health, visuals?.traffic?.byServer, refreshKey]);
+
   if (!health) {
     return (
       <DashboardSection title="Health & reliability" subtitle="Upstream MCP server health checks">
@@ -73,15 +84,6 @@ export function HealthReliabilityPanel({ health, refreshKey = 0 }: Props) {
 
   const atRisk = health.atRisk || [];
   const reliability = computeReliabilityRiskMetrics(health, visuals?.traffic?.byServer ?? []);
-
-  useEffect(() => {
-    void trackAdvancedAnalyticsEvent({
-      feature: 'reliability_risk_index',
-      metric: 'index',
-      confidence: reliability.caveat.confidence,
-      value: reliability.index,
-    });
-  }, [reliability.caveat.confidence, reliability.index]);
 
   return (
     <div className="health-reliability-panel">

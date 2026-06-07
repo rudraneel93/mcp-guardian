@@ -2,6 +2,23 @@
 
 All notable changes to MCP Guardian will be documented in this file.
 
+## [4.1.8] - 2026-06-07
+
+### Added
+
+- **Incident policy generate/accept/reject** — local dashboard API and Enterprise AI drawer for incident-driven blocking rules
+- **npm publish verification** — `verify-npm-deps-resolvable.mjs` and `verify-npm-registry-install.mjs` gate dependency chain before server publish
+
+### Changed
+
+- **Publish workflow** — GitHub Actions runs tests before publish and delegates to hardened `publish-npm-all.sh`
+- **Version alignment** — `plugin-sdk` included in lockstep version check with core/server/cli
+
+### Fixed
+
+- **React #310** — moved analytics hooks before early returns in SecurityPosturePanel and HealthReliabilityPanel
+- **Accept rule UX** — clearer feedback when policy apply returns duplicate or validation warnings
+
 ## [4.1.6] - 2026-06-01
 
 ### Added

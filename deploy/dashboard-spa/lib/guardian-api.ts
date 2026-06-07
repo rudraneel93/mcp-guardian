@@ -1220,6 +1220,117 @@ export type InvestigateIncidentResult = {
   error?: string;
 };
 
+export type IncidentPolicyDraft = {
+  draftId: string;
+  triggerId: string;
+  incidentId?: string;
+  attackClass: string;
+  hypothesis: string;
+  rule: Record<string, unknown>;
+  yaml: string;
+  confidence: number;
+  replay?: {
+    passed: number;
+    total: number;
+    readyForReview: boolean;
+    blockReason?: string;
+  };
+  validationErrors?: string[];
+  source: 'threat-lab' | 'policy-copilot' | 'existing-candidate';
+  linkedCandidateId?: string;
+};
+
+export type GenerateIncidentPolicyResult = {
+  draft: IncidentPolicyDraft | null;
+  error?: string;
+  code?: string;
+};
+
+export async function generateIncidentPolicy(triggerId: string): Promise<GenerateIncidentPolicyResult> {
+  const headers = await buildMutatingHeaders();
+  const res = await guardianFetch('/api/incidents/generate-policy', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ triggerId }),
+  });
+  if (!res.ok) {
+    let message = `Generate policy failed (${res.status})`;
+    let code: string | undefined;
+    try {
+      const body = (await res.json()) as { error?: string; code?: string };
+      if (body.error) message = body.error;
+      code = body.code;
+    } catch {
+      /* ignore */
+    }
+    return { draft: null, error: message, code };
+  }
+  return { draft: (await res.json()) as IncidentPolicyDraft };
+}
+
+export async function acceptIncidentPolicyDraft(payload: {
+  draftId: string;
+  triggerId: string;
+  rule: Record<string, unknown>;
+  incidentId?: string;
+  linkedCandidateId?: string;
+  confidence?: number;
+  simulationPassed?: boolean;
+  replayCoverage?: number;
+}): Promise<{ ok: boolean; error?: string; ruleName?: string }> {
+  const headers = await buildMutatingHeaders();
+  const res = await guardianFetch('/api/incidents/policy/accept', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    let message = `Accept failed (${res.status})`;
+    try {
+      const body = (await res.json()) as {
+        error?: string;
+        reason?: string;
+        blockers?: string[];
+        simulationSummary?: string;
+      };
+      if (body.error === 'autopilot_safety_blocked' && body.blockers?.length) {
+        message = `Safety blocked: ${body.blockers.join('; ')}`;
+      } else if (body.error === 'Not found') {
+        message =
+          'Accept API unavailable — restart the dashboard proxy after `pnpm build` to load incident policy routes.';
+      } else if (body.reason) {
+        message = body.reason;
+      } else if (body.error) {
+        message = body.error;
+      }
+      if (body.simulationSummary && res.status === 400) {
+        message = `${message} (${body.simulationSummary.slice(0, 120)}…)`;
+      }
+    } catch {
+      /* ignore */
+    }
+    return { ok: false, error: message };
+  }
+  const body = (await res.json()) as { ruleName?: string };
+  return { ok: true, ruleName: body.ruleName };
+}
+
+export async function rejectIncidentPolicyDraft(payload: {
+  draftId: string;
+  triggerId: string;
+  linkedCandidateId?: string;
+  ruleName?: string;
+  confidence?: number;
+}): Promise<boolean> {
+  const headers = await buildMutatingHeaders();
+  const res = await guardianFetch('/api/incidents/policy/reject', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(payload),
+  });
+  return res.ok;
+}
+
 export async function investigateIncident(triggerId: string): Promise<InvestigateIncidentResult> {
   const headers = await buildMutatingHeaders();
   const res = await guardianFetch('/api/incidents/investigate', {
