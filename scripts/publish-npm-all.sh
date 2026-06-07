@@ -94,6 +94,7 @@ publish_pkg() {
   (cd "$dir" && npm publish "${PUBLISH_ARGS[@]}")
 }
 
+# Publish dependencies first
 publish_pkg packages/plugin-sdk
 PLUGIN_SDK_VERSION=$(node -p "require('./packages/plugin-sdk/package.json').version")
 wait_dep_visible "@mcp-guardian/plugin-sdk" "$PLUGIN_SDK_VERSION"
@@ -102,16 +103,21 @@ publish_pkg packages/core
 CORE_VERSION=$(node -p "require('./packages/core/package.json').version")
 wait_dep_visible "@mcp-guardian/core" "$CORE_VERSION"
 
-# Mandatory: dependency chain must resolve before server publish
+# Verify ALL dependencies are visible before server publish
+echo ""
+echo "[publish] Verifying dependency chain is visible on registry..."
 for dep_pkg in "@mcp-guardian/plugin-sdk" "@mcp-guardian/core"; do
   dep_ver="$PLUGIN_SDK_VERSION"
   [[ "$dep_pkg" == "@mcp-guardian/core" ]] && dep_ver="$CORE_VERSION"
   if ! npm view "${dep_pkg}@${dep_ver}" version &>/dev/null; then
-    echo "ERROR: ${dep_pkg}@${dep_ver} not on registry — cannot publish server@${SERVER_VERSION}" >&2
+    echo "ERROR: ${dep_pkg}@${dep_ver} not on registry — cannot safely publish server@${SERVER_VERSION}" >&2
+    echo "This is a critical issue: the server would be unpublishable." >&2
     exit 1
   fi
+  echo "  ✓ ${dep_pkg}@${dep_ver} visible on registry"
 done
 
+# Publish server package
 if npm view "@mcp-guardian/server@${SERVER_VERSION}" version &>/dev/null; then
   echo ""
   echo "=== Skip @mcp-guardian/server@${SERVER_VERSION} (already on npm) ==="
@@ -127,6 +133,7 @@ else
   rm -f "$SERVER_TGZ"
 fi
 
+# Publish CLI package
 CLI_VERSION=$(node -p "require('./packages/cli/package.json').version")
 if npm view "@mcp-guardian/cli@${CLI_VERSION}" version &>/dev/null; then
   echo ""
@@ -143,14 +150,19 @@ else
   rm -f "packages/cli/$CLI_TGZ"
 fi
 
+# Final verification
 if npm view "@mcp-guardian/server@${SERVER_VERSION}" version &>/dev/null; then
   echo ""
-  echo "=== Verifying registry dependency chain for server@${SERVER_VERSION} ==="
+  echo "=== Final Verification: Testing registry dependency chain ==="
   node "$ROOT/scripts/verify-npm-deps-resolvable.mjs" "@mcp-guardian/server" "$SERVER_VERSION"
+  echo ""
+  echo "=== Testing clean registry install ==="
   node "$ROOT/scripts/verify-npm-registry-install.mjs" "$SERVER_VERSION"
 fi
 
 echo ""
-echo "Done. Verify install:"
+echo "✓ All packages published successfully!"
+echo ""
+echo "Verify install:"
 echo "  npm install -g @mcp-guardian/server@${SERVER_VERSION}"
 echo "  npm view @mcp-guardian/server@${SERVER_VERSION} dependencies"

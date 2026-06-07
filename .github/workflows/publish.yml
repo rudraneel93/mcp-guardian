@@ -54,6 +54,11 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           PUBLISH_PROVENANCE: "1"
 
+      - name: Verify clean registry install of published server
+        run: |
+          SERVER_VERSION=$(node -p "require('./package.json').version")
+          node scripts/verify-npm-registry-install.mjs "$SERVER_VERSION"
+
       - name: Attest build provenance (root package)
         uses: actions/attest-build-provenance@v2
         with:
