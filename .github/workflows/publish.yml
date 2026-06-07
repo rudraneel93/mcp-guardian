@@ -57,10 +57,26 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+      - name: Wait for npm dependency visibility
+        run: |
+          CORE_VERSION=$(node -p "require('./packages/core/package.json').version")
+          PLUGIN_SDK_VERSION=$(node -p "require('./packages/plugin-sdk/package.json').version")
+          node scripts/wait-npm-registry.mjs @mcp-guardian/plugin-sdk "$PLUGIN_SDK_VERSION"
+          node scripts/wait-npm-registry.mjs @mcp-guardian/core "$CORE_VERSION"
+
       - name: Publish @mcp-guardian/server (root — full dep tree)
         run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Verify published server installs from registry
+        run: |
+          SERVER_VERSION=$(node -p "require('./package.json').version")
+          node scripts/wait-npm-registry.mjs @mcp-guardian/server "$SERVER_VERSION"
+          tmp=$(mktemp -d)
+          cd "$tmp"
+          npm init -y >/dev/null
+          npm install --ignore-scripts --no-audit --no-fund "@mcp-guardian/server@$SERVER_VERSION"
 
       - name: Publish @mcp-guardian/cli
         working-directory: packages/cli
